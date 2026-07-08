@@ -1,4 +1,4 @@
-<!-- 顶部导航栏：Logo、页面导航、主题切换、重力特效触发，滚动时自动变为胶囊样式 -->
+<!-- 顶部导航栏：Logo、页面导航、主题切换，滚动时自动变为胶囊样式 -->
 <template>
   <div class="navbar-wrapper">
     <!-- 导航栏主体：滚动后变为胶囊毛玻璃样式，未滚动时全宽透明 -->
@@ -33,18 +33,15 @@
 
         <!-- 功能按钮组 -->
         <div class="navbar-actions">
+          <!-- 语言切换按钮：切换中文 / English -->
+          <button class="lang-btn" @click="appStore.toggleLanguage()">
+            {{ appStore.language === 'zh' ? '中' : 'EN' }}
+          </button>
           <!-- 主题切换按钮：浅色时显示月亮图标，深色时显示太阳图标 -->
           <button class="theme-btn" @click="appStore.toggleTheme()">
             <el-icon :size="20">
               <Moon v-if="appStore.theme === 'light'" />
               <Sunny v-else />
-            </el-icon>
-          </button>
-
-          <!-- 重力特效触发按钮 -->
-          <button class="gravity-btn" @click="triggerGravity">
-            <el-icon :size="20" class="gravity-btn-icon">
-              <WarningFilled />
             </el-icon>
           </button>
         </div>
@@ -56,7 +53,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Moon, Sunny, WarningFilled } from '@element-plus/icons-vue'
+import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { NAV_ITEMS } from '@/data/navigation'
 
@@ -73,11 +70,6 @@ function goTo(tab: string) {
   appStore.setActiveTab(tab)
   router.push({ name: tab.charAt(0).toUpperCase() + tab.slice(1) })
   window.scrollTo(0, 0)
-}
-
-// 触发重力爆炸特效
-function triggerGravity() {
-  appStore.setGravityActive(true)
 }
 
 // 监听滚动事件：超过 120px 时切换为胶囊样式
@@ -354,43 +346,39 @@ onUnmounted(() => {
   }
 }
 
-/* 重力特效触发按钮 */
-.gravity-btn {
+/* 语言切换按钮：显示当前语言，点击切换中/英 */
+.lang-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
-  border: none;
+  min-width: 2.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #e5e7eb;
   background: none;
   border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
   color: #000000;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, color 0.3s;
 
   &:hover {
-    background: #fee2e2;
+    background: #f3f4f6;
   }
 
   .dark & {
+    border-color: #374151;
     color: #ffffff;
 
     &:hover {
-      background: #7f1d1d;
+      background: #1f2937;
     }
   }
 
   @media (min-width: 768px) {
-    padding: 0.5rem;
-  }
-}
-
-/* 重力特效图标：hover 变红 */
-.gravity-btn-icon {
-  color: inherit;
-  transition: color 0.3s;
-
-  &:hover {
-    color: #ef4444;
+    font-size: 1rem;
+    min-width: 2.75rem;
   }
 }
 </style>

@@ -1,4 +1,4 @@
-// 全局状态管理：语言、主题（深色/浅色自动切换）、当前页签、重力特效开关
+// 全局状态管理：语言、主题（深色/浅色自动切换）、当前页签
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Language } from '@/types'
@@ -6,12 +6,31 @@ import type { Language } from '@/types'
 export const useAppStore = defineStore('app', () => {
   // 当前语言，默认中文
   const language = ref<Language>('zh')
+
+  // 切换语言（中文 ↔ 英文）
+  function toggleLanguage() {
+    language.value = language.value === 'zh' ? 'en' : 'zh'
+    applyLanguage()
+  }
+
+  // 将语言应用到 DOM（设置 lang 属性）并持久化到 localStorage
+  function applyLanguage() {
+    document.documentElement.setAttribute('lang', language.value)
+    localStorage.setItem('language', language.value)
+  }
+
+  // 初始化语言：优先读取 localStorage 中的用户选择
+  function initLanguage() {
+    const saved = localStorage.getItem('language')
+    if (saved === 'zh' || saved === 'en') {
+      language.value = saved
+    }
+    applyLanguage()
+  }
   // 当前主题，默认浅色
   const theme = ref<'light' | 'dark'>('light')
   // 当前激活的页签，用于导航栏高亮
   const activeTab = ref('dashboard')
-  // 重力爆炸特效是否激活
-  const gravityActive = ref(false)
 
   // 计算属性：是否为深色模式
   const isDark = computed(() => theme.value === 'dark')
@@ -50,20 +69,15 @@ export const useAppStore = defineStore('app', () => {
     activeTab.value = tab
   }
 
-  // 设置重力特效开关
-  function setGravityActive(val: boolean) {
-    gravityActive.value = val
-  }
-
   return {
     language,
     theme,
     activeTab,
-    gravityActive,
     isDark,
+    toggleLanguage,
+    initLanguage,
     toggleTheme,
     initTheme,
-    setActiveTab,
-    setGravityActive
+    setActiveTab
   }
 })

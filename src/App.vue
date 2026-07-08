@@ -10,6 +10,7 @@ import { useAppStore } from '@/store/app'
 const appStore = useAppStore()
 
 onMounted(() => {
+  appStore.initLanguage()
   appStore.initTheme()
 })
 </script>

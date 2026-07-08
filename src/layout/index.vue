@@ -1,4 +1,4 @@
-<!-- 主布局：包含导航栏、音乐播放器、页面路由视图、页脚、重力特效重置按钮 -->
+<!-- 主布局：包含导航栏、音乐播放器、页面路由视图、页脚 -->
 <template>
   <!-- 全局容器：深色/浅色主题切换、文字选中颜色、禁止横向滚动 -->
   <div class="app-root">
@@ -18,19 +18,11 @@
         <p>{{ contactContent.footerDesign }}</p>
       </footer>
     </main>
-    <!-- 重力特效激活时显示的重置按钮（固定在底部居中） -->
-    <div v-if="appStore.gravityActive" class="gravity-reset-wrap">
-      <button class="gravity-reset-btn" @click="resetGravity">
-        <el-icon :size="24"><Refresh /></el-icon>
-        {{ appStore.language === 'zh' ? '变回去' : 'Go Back' }}
-      </button>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { CONTACT_DATA } from '@/data/home'
 import SidebarNav from './components/SidebarNav.vue'
@@ -39,11 +31,6 @@ import MusicPlayer from '@/components/MusicPlayer.vue'
 const appStore = useAppStore()
 // 联系方式数据（用于页脚设计声明文案）
 const contactContent = computed(() => CONTACT_DATA[appStore.language])
-
-// 重置重力特效：关闭特效状态，由 PortfolioGrid 等组件监听处理
-function resetGravity() {
-  appStore.setGravityActive(false)
-}
 </script>
 
 <style lang="less" scoped>
@@ -105,45 +92,6 @@ function resetGravity() {
 
   @media (min-width: 768px) {
     flex-direction: row;
-  }
-}
-
-/* 重力特效重置按钮外层：固定底部居中，默认不拦截点击 */
-.gravity-reset-wrap {
-  position: fixed;
-  bottom: 2rem;
-  left: 0;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  z-index: 1001;
-  pointer-events: none;
-}
-
-/* 重力特效重置按钮 */
-.gravity-reset-btn {
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 9999px;
-  background: #000000;
-  color: #ffffff;
-  font-size: 1.25rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s;
-
-  &:hover {
-    transform: scale(1.1);
-  }
-
-  .dark & {
-    background: #ffffff;
-    color: #000000;
   }
 }
 
