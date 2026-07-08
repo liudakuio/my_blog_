@@ -204,8 +204,9 @@ onUnmounted(() => {
   -ms-overflow-style: none;
   scrollbar-width: none;
   transition: all 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    /* 左侧不再渐隐，避免遮挡第一个菜单项「主页」；右侧保留滚动提示 */
+  -webkit-mask-image: linear-gradient(to right, black, black 92%, transparent);
+  mask-image: linear-gradient(to right, black, black 92%, transparent);
 
   &::-webkit-scrollbar {
     display: none;
