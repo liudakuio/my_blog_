@@ -5,7 +5,7 @@ export const VIDEOGRAPHY_DATA: Project[] = [
   {
     id: 'sample-1',
     common: {
-      category: 'Category Name',
+      category: 'Videography',
       image: 'https://via.placeholder.com/1920x1080?text=Project+Cover',
       // bilibiliId: 'BVxxxxxxx' // For video
     },
