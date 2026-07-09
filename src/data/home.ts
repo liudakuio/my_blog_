@@ -19,10 +19,10 @@ export const HOME_DATA: Record<Language, HomeContent> = {
     heroItems: [
       { text: '软件开发', annotation: '（目前主业）', category: Category.DEV },
       { text: '嵌入式开发', annotation: '（想学习）', category: Category.DESIGN },
-      { text: '旅游', annotation: '（游戏人生）', category: Category.VIDEO },
+      // { text: '旅游', annotation: '（游戏人生）', category: Category.VIDEO },
       { text: '做饭', annotation: '（还在学）', category: null }
     ],
-    intro: 'Your personal catchphrase or introduction goes here.',
+    intro: '',
     selectedWorks: '精选作品',
     years: '[ 2024 — 2026 ]'
   },
@@ -30,10 +30,10 @@ export const HOME_DATA: Record<Language, HomeContent> = {
     heroItems: [
       { text: 'Software Development', annotation: '(Current main work)', category: Category.DEV },
       { text: 'Embedded development', annotation: '(I want to learn)', category: Category.DESIGN },
-      { text: 'Development', annotation: '(Vibe Coder)', category: Category.VIDEO },
+      // { text: 'Development', annotation: '(Vibe Coder)', category: Category.VIDEO },
       { text: 'Cooking', annotation: '(Still Learning)', category: null }
     ],
-    intro: 'Your personal catchphrase or introduction goes here.',
+    intro: '',
     selectedWorks: 'Selected Works',
     years: '[ 20XX — 20XX ]'
   }
