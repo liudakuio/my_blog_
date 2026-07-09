@@ -17,8 +17,9 @@ export interface HeroItem {
 export const HOME_DATA: Record<Language, HomeContent> = {
   zh: {
     heroItems: [
-      { text: '后端开发', annotation: '（目前主业）', category: Category.VIDEO },
-      { text: '前端开发', annotation: '（当前方向，想学习）', category: Category.DESIGN },
+      { text: '软件开发', annotation: '（目前主业）', category: Category.DEV },
+      { text: '嵌入式开发', annotation: '（想学习）', category: Category.DESIGN },
+      { text: '旅游', annotation: '（游戏人生）', category: Category.VIDEO },
       { text: '做饭', annotation: '（还在学）', category: null }
     ],
     intro: 'Your personal catchphrase or introduction goes here.',
@@ -27,9 +28,9 @@ export const HOME_DATA: Record<Language, HomeContent> = {
   },
   en: {
     heroItems: [
-      { text: 'Photography & Videography', annotation: '(Extensive Portfolio)', category: Category.VIDEO },
-      { text: 'Graphic & UI', annotation: '(Main Focus & Passion)', category: Category.DESIGN },
-      { text: 'Development', annotation: '(Vibe Coder)', category: Category.DEV },
+      { text: 'Software Development', annotation: '(Current main work)', category: Category.DEV },
+      { text: 'Embedded development', annotation: '(I want to learn)', category: Category.DESIGN },
+      { text: 'Development', annotation: '(Vibe Coder)', category: Category.VIDEO },
       { text: 'Cooking', annotation: '(Still Learning)', category: null }
     ],
     intro: 'Your personal catchphrase or introduction goes here.',
@@ -62,7 +63,7 @@ export const CONTACT_DATA: Record<Language, ContactContent> = {
     contactLabel: 'Get in touch',
     emailMeLabel: 'Email Me',
     email: '1365693530@qq.com',
-    hello: 'Hello ;-)',
+    hello: 'Hello :-)',
     intro: 'Welcome to discuss & cooperate.',
     socials: {
       wechat: 'YourWeChatID',

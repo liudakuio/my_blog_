@@ -42,7 +42,7 @@ export const CONTACT_DATA: Record<Language, ContactContent> = {
   },
   en: {
     baseLabel: "BASE",
-    locationValue: "河南 郑州",
+    locationValue: "HENAN ZHENGZHOU",
     contactLabel: "Get in touch",
     emailMeLabel: "Email Me",
     email: "your.email@example.com",
