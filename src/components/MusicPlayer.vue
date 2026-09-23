@@ -183,7 +183,7 @@
           <!-- 底部：歌单链接卡片 -->
           <div class="player-playlist">
             <a
-              href="https://music.163.com/playlist?id=74188173&uct2=U2FsdGVkX1+9hSmPKFKOu99/rqUgKMjig48CSYAF4Zs="
+              href="https://music.163.com/playlist?id=2090469224"
               target="_blank"
               rel="noopener noreferrer"
               class="player-playlist-link"
