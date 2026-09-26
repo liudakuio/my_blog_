@@ -4,10 +4,6 @@ import { ref } from 'vue'
 import { getArticlePage, getArticleCategories } from '@/api'
 import type { ArticleVo, CategoryVo } from '@/api/types'
 import type { Article } from '@/types'
-import { mockArticle, mockCategories } from '@/mock/article'
-
-// TODO: 临时本地 mock，接入后端后删除下面这行开关并恢复下方 API 调用。
-const USE_LOCAL_MOCK = true
 
 /** 将后端 ArticleVo 归一化为前端使用的 Article 结构 */
 function normalize(vo: ArticleVo): Article {
@@ -44,13 +40,6 @@ export const useArticleStore = defineStore('articles', () => {
     const append = options?.append ?? false
     loading.value = true
     try {
-      // TODO: 临时本地 mock，接入后端后恢复下方 getArticlePage 调用。
-      if (USE_LOCAL_MOCK) {
-        const list = [mockArticle]
-        articles.value = append ? [...articles.value, ...list] : list
-        total.value = list.length
-        return
-      }
       const res = await getArticlePage({
         category: query.value.category || undefined,
         sort: query.value.sort,
@@ -69,12 +58,6 @@ export const useArticleStore = defineStore('articles', () => {
 
   async function loadCategories(force = false) {
     if (categoriesLoaded.value && !force) return
-    // TODO: 临时本地 mock，接入后端后恢复下方 getArticleCategories 调用。
-    if (USE_LOCAL_MOCK) {
-      categories.value = mockCategories
-      categoriesLoaded.value = true
-      return
-    }
     try {
       categories.value = (await getArticleCategories()) ?? []
       categoriesLoaded.value = true
