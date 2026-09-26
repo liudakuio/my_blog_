@@ -121,6 +121,14 @@
       </div>
     </div>
 
+    <!-- 加载中 / 空数据提示 -->
+    <div v-if="loading" class="grid-tip">
+      {{ appStore.language === 'zh' ? '作品加载中…' : 'Loading projects…' }}
+    </div>
+    <div v-else-if="filteredProjects.length === 0" class="grid-tip">
+      {{ appStore.language === 'zh' ? '暂无作品' : 'No projects found' }}
+    </div>
+
     <!-- 项目详情弹窗：延迟渲染，关闭后 300ms 销毁 -->
     <ProjectDetailModal
       v-if="isModalRendered"
@@ -174,9 +182,10 @@ import {
   TopRight, ChatLineSquare, CreditCard, Document, VideoCamera, Monitor,
   Close, ArrowLeft, ArrowRight
 } from '@element-plus/icons-vue'
+import { onMounted } from 'vue'
 import { useAppStore } from '@/store/app'
-import { PROJECT_DATA } from '@/data/projects'
-import { Category } from '@/types'
+import { usePortfolioStore } from '@/store/portfolio'
+import { pickText } from '@/utils/i18n'
 import type { Project } from '@/types'
 import ProjectDetailModal from '@/views/portfolio/components/ProjectDetailModal.vue'
 
@@ -186,6 +195,13 @@ const props = defineProps<{
 }>()
 
 const appStore = useAppStore()
+const portfolioStore = usePortfolioStore()
+
+// 组件挂载时拉取作品与分类（store 内部做了去重，主页与作品页共用同一份数据）
+onMounted(() => {
+  portfolioStore.loadProjects()
+  portfolioStore.loadCategories()
+})
 
 // 当前选中的分类筛选
 const filter = ref<string>('All')
@@ -205,38 +221,29 @@ watch(() => props.externalFilter, (val) => {
   if (val) filter.value = val
 }, { immediate: true })
 
-// 分类显示顺序
-const preferredOrder = [Category.PHOTO, Category.VIDEO, Category.DESIGN, Category.DEV]
+// 全部项目数据（来自 /api/projects）
+const projectData = computed(() => portfolioStore.projects)
+// 是否正在加载
+const loading = computed(() => portfolioStore.loading)
 
-// 全部项目数据
-const projectData = computed(() => PROJECT_DATA)
+// 可用分类：接口下发的分类字典 + 前端拼在首位的"全部"
+const categories = computed(() => [
+  'All',
+  ...[...portfolioStore.categories]
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map(item => item.value)
+])
 
-// 可用的分类列表（只显示有数据的分类，开发类始终显示）
-const categories = computed(() => {
-  const current = projectData.value
-  const available = preferredOrder.filter(cat =>
-    current.some(p => p.common.category === cat) || cat === Category.DEV
-  )
-  return ['All', ...available]
-})
-
-// 分类标签的中英文映射
+// 分类标签文案：优先取接口下发的双语字典，缺省回退分类值本身
 const categoryLabels = computed(() => {
-  const zh: Record<string, string> = {
-    'All': '全部',
-    'Videography': '动态影像',
-    'Graphics & UI': '平面交互',
-    'Photography': '静态摄影',
-    'Development': '应用开发'
+  const map: Record<string, string> = {
+    All: appStore.language === 'zh' ? '全部' : 'All'
   }
-  const en: Record<string, string> = {
-    'All': 'All',
-    'Videography': 'Videography',
-    'Graphics & UI': 'Graphics & UI',
-    'Photography': 'Photography',
-    'Development': 'Development'
+  for (const item of portfolioStore.categories) {
+    const value = item.zh ?? item.en
+    map[item.value] = pickText(value?.label ?? item.label, appStore.language, item.value)
   }
-  return appStore.language === 'zh' ? zh : en
+  return map
 })
 
 // 根据当前筛选分类过滤项目
@@ -251,12 +258,23 @@ function projectContent(project: Project) {
   return appStore.language === 'zh' ? project.zh : project.en
 }
 
-// 打开项目详情弹窗
-function openProjectDetail(project: Project) {
+// 打开项目详情弹窗：先展示列表数据，再按需拉取图集（列表接口不返回图集）
+async function openProjectDetail(project: Project) {
   selectedProject.value = project
   displayProject.value = project
   isModalRendered.value = true
   document.body.style.overflow = 'hidden'
+
+  const needGallery = (project.common.galleryCount ?? 0) > 0 && !project.common.gallery?.length
+  if (!needGallery) return
+
+  const detail = await portfolioStore.fetchDetail(project.id)
+  if (!detail) return
+  // 弹窗仍打开时才更新，避免用户已关闭后仍赋值
+  if (displayProject.value?.id === project.id) {
+    displayProject.value = detail
+    selectedProject.value = detail
+  }
 }
 
 // 关闭项目详情弹窗：先清空选中状态，延迟 300ms 后销毁弹窗组件
@@ -374,6 +392,15 @@ function nextImage() {
 }
 
 /* 项目卡片网格 */
+/* 加载中 / 空数据提示 */
+.grid-tip {
+  padding: 4rem 0;
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: 1fr;

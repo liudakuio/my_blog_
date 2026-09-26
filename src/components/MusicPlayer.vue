@@ -97,8 +97,8 @@
 
           <!-- 歌曲信息：标题 + 艺术家 -->
           <div class="player-song">
-            <h3 class="player-song-title">{{ currentSong.title }}</h3>
-            <p class="player-song-artist">{{ currentSong.artist }}</p>
+            <h3 class="player-song-title">{{ currentSong?.title }}</h3>
+            <p class="player-song-artist">{{ currentSong?.artist }}</p>
           </div>
 
           <!-- 进度条 + 音量 + 播放控制 -->
@@ -183,19 +183,15 @@
           <!-- 底部：歌单链接卡片 -->
           <div class="player-playlist">
             <a
-              href="https://music.163.com/playlist?id=2090469224"
+              :href="playlistLink.url"
               target="_blank"
               rel="noopener noreferrer"
               class="player-playlist-link"
             >
               <div class="player-playlist-card">
                 <div class="player-playlist-text">
-                  <span class="player-playlist-title">
-                    {{ appStore.language === 'zh' ? '品味不错？' : 'Nice taste?' }}
-                  </span>
-                  <span class="player-playlist-sub">
-                    {{ appStore.language === 'zh' ? '我的歌单有更多好听的哦' : 'Check out my full playlist for more' }}
-                  </span>
+                  <span class="player-playlist-title">{{ playlistLink.title }}</span>
+                  <span class="player-playlist-sub">{{ playlistLink.subtitle }}</span>
                 </div>
                 <div class="player-playlist-icon">
                   <el-icon class="player-playlist-icon-el"><TopRight /></el-icon>
@@ -215,10 +211,25 @@ import {
   Headset, ArrowDown, DArrowLeft, DArrowRight, CaretRight, VideoPause, TopRight
 } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { MUSIC_PLAYLIST } from '@/data/music'
+import { useSiteStore } from '@/store/site'
+import { pickText } from '@/utils/i18n'
 import ElasticSlider from './ElasticSlider.vue'
 
 const appStore = useAppStore()
+const siteStore = useSiteStore()
+
+// 播放列表：来自 /api/music/playlist
+const playlist = computed(() => siteStore.playlist)
+
+// 底部歌单外链卡片：来自 /api/site/config 的 musicPlaylistLink
+const playlistLink = computed(() => {
+  const link = siteStore.musicPlaylistLink
+  return {
+    title: pickText(link?.title, appStore.language),
+    subtitle: pickText(link?.subtitle, appStore.language),
+    url: link?.url ?? ''
+  }
+})
 
 // 音频元素引用
 const audioRef = ref<HTMLAudioElement | null>(null)
@@ -252,8 +263,8 @@ const showLoadingUI = ref(false)
 // 是否正在拖拽进度条
 const isSeeking = ref(false)
 
-// 当前播放的歌曲对象
-const currentSong = computed(() => MUSIC_PLAYLIST[currentSongIndex.value])
+// 当前播放的歌曲对象（列表为空时返回 null，避免渲染报错）
+const currentSong = computed(() => playlist.value[currentSongIndex.value] ?? null)
 
 // 加载状态延迟显示定时器
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
@@ -287,7 +298,8 @@ watch(volume, (val) => {
 })
 
 // 获取歌曲 URL（本地路径或远程 URL）
-function getSongUrl(song: typeof currentSong.value, isCover = false) {
+function getSongUrl(song: { cover: string; audio: string } | null, isCover = false) {
+  if (!song) return ''
   const path = isCover ? song.cover : song.audio
   if (path.startsWith('http')) return path
   const normalized = path.startsWith('/') ? path : `/${path}`
@@ -334,13 +346,15 @@ function handlePlayPause() {
 
 // 下一曲（循环）
 function handleNext() {
-  currentSongIndex.value = (currentSongIndex.value + 1) % MUSIC_PLAYLIST.length
+  if (!playlist.value.length) return
+  currentSongIndex.value = (currentSongIndex.value + 1) % playlist.value.length
   isPlaying.value = true
 }
 
 // 上一曲（循环）
 function handlePrev() {
-  currentSongIndex.value = (currentSongIndex.value - 1 + MUSIC_PLAYLIST.length) % MUSIC_PLAYLIST.length
+  if (!playlist.value.length) return
+  currentSongIndex.value = (currentSongIndex.value - 1 + playlist.value.length) % playlist.value.length
   isPlaying.value = true
 }
 

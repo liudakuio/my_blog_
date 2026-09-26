@@ -12,7 +12,7 @@
 
         <template v-if="project">
           <!-- 摄影类：图片画廊 -->
-          <div v-if="project.category === 'Photography'" class="gallery-wrap">
+          <div v-if="project.common.category === 'Photography'" class="gallery-wrap">
             <h2 class="gallery-title">{{ content.title }}</h2>
             <p class="gallery-subtitle">{{ content.description }}</p>
             <div class="gallery-grid">
@@ -38,29 +38,29 @@
             <div
               class="media-frame"
               :class="{
-                'media-frame--tall': project.figmaUrl || project.websiteUrl,
-                'media-frame--video': !project.figmaUrl && !project.websiteUrl && (project.videoUrl || project.bilibiliId),
-                'media-frame--short': !project.figmaUrl && !project.websiteUrl && !project.videoUrl && !project.bilibiliId
+                'media-frame--tall': project.common.figmaUrl || project.common.websiteUrl,
+                'media-frame--video': !project.common.figmaUrl && !project.common.websiteUrl && (project.common.videoUrl || project.common.bilibiliId),
+                'media-frame--short': !project.common.figmaUrl && !project.common.websiteUrl && !project.common.videoUrl && !project.common.bilibiliId
               }"
             >
-              <video v-if="project.videoUrl" :src="project.videoUrl" controls class="media-video" :poster="project.image" />
+              <video v-if="project.common.videoUrl" :src="project.common.videoUrl" controls class="media-video" :poster="project.common.image" />
               <iframe
-                v-else-if="project.bilibiliId"
-                :src="`https://player.bilibili.com/player.html?bvid=${project.bilibiliId}&page=1&high_quality=1&danmaku=0&autoplay=0`"
+                v-else-if="project.common.bilibiliId"
+                :src="`https://player.bilibili.com/player.html?bvid=${project.common.bilibiliId}&page=1&high_quality=1&danmaku=0&autoplay=0`"
                 class="media-iframe"
                 scrolling="no"
                 frameborder="0"
                 allowfullscreen
               ></iframe>
               <iframe
-                v-else-if="project.figmaUrl"
-                :src="`https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(project.figmaUrl)}`"
+                v-else-if="project.common.figmaUrl"
+                :src="`https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(project.common.figmaUrl)}`"
                 class="media-iframe"
                 allowfullscreen
               ></iframe>
               <iframe
-                v-else-if="project.websiteUrl"
-                :src="project.websiteUrl"
+                v-else-if="project.common.websiteUrl"
+                :src="project.common.websiteUrl"
                 class="media-iframe media-iframe--light"
                 allowfullscreen
               ></iframe>
@@ -72,13 +72,13 @@
                   </p>
                 </div>
               </div>
-              <div v-if="!project.videoUrl && !project.bilibiliId && !project.figmaUrl && !project.websiteUrl && project.image" class="media-gradient"></div>
+              <div v-if="!project.common.videoUrl && !project.common.bilibiliId && !project.common.figmaUrl && !project.common.websiteUrl && project.common.image" class="media-gradient"></div>
             </div>
 
             <div class="modal-body">
               <div class="modal-body-head">
                 <div class="modal-tags">
-                  <span class="modal-category">{{ categoryLabels[project.category] || project.category }}</span>
+                  <span class="modal-category">{{ categoryLabels[project.common.category] || project.common.category }}</span>
                   <span class="modal-subtitle">{{ content.subtitle }}</span>
                 </div>
                 <h2 class="modal-title">{{ content.title }}</h2>
@@ -132,14 +132,14 @@
                         >{{ tag }}</span>
                       </div>
                     </div>
-                    <div v-if="project.githubUrl || project.websiteUrl" class="links-col">
+                    <div v-if="project.common.githubUrl || project.common.websiteUrl" class="links-col">
                       <h4 class="block-title">
                         {{ appStore.language === 'zh' ? '相关链接' : 'Links' }}
                       </h4>
                       <div class="link-list">
                         <a
-                          v-if="project.githubUrl"
-                          :href="project.githubUrl"
+                          v-if="project.common.githubUrl"
+                          :href="project.common.githubUrl"
                           target="_blank"
                           class="link-item"
                         >
@@ -147,8 +147,8 @@
                           <span class="link-label">GitHub</span>
                         </a>
                         <a
-                          v-if="project.websiteUrl"
-                          :href="project.websiteUrl"
+                          v-if="project.common.websiteUrl"
+                          :href="project.common.websiteUrl"
                           target="_blank"
                           class="link-item"
                         >
@@ -176,7 +176,7 @@ import type { Project } from '@/types'
 
 const props = defineProps<{
   visible: boolean
-  project: Project['common'] & Project['zh'] & Project['en'] & { category: string } | null
+  project: Project | null
 }>()
 
 const emit = defineEmits<{
@@ -186,10 +186,12 @@ const emit = defineEmits<{
 
 const appStore = useAppStore()
 
-const content = computed(() => {
-  if (!props.project) return null
-  const key = appStore.language === 'zh' ? 'zh' : 'en'
-  return props.project as any
+// 当前语言的文案内容（无项目时返回空内容，保证模板取值安全）
+const content = computed<Project['zh']>(() => {
+  if (!props.project) {
+    return { title: '', subtitle: '', description: '', role: '', tags: [], awards: [], concept: '', roleDetail: '' }
+  }
+  return appStore.language === 'zh' ? props.project.zh : props.project.en
 })
 
 const categoryLabels: Record<string, string> = {
@@ -199,11 +201,8 @@ const categoryLabels: Record<string, string> = {
   'Development': appStore.language === 'zh' ? '应用开发' : 'Development'
 }
 
-const gallery = computed(() => {
-  if (!props.project) return []
-  const g = props.project?.gallery || []
-  return g
-})
+// 图集：来自作品详情接口
+const gallery = computed(() => props.project?.common.gallery || [])
 
 function isNoneAward(awards: string[]) {
   return awards.some(a => a === '暂无获奖' || a === '无' || a === 'None')

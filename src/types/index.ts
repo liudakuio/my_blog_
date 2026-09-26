@@ -112,6 +112,8 @@ export interface Project {
     githubUrl?: string
     icon?: string
     gallery?: string[]
+    /** 图集张数，由接口下发；列表接口默认不返回图集内容 */
+    galleryCount?: number
   }
   zh: {
     title: string

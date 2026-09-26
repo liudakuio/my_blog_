@@ -5,88 +5,35 @@
     <h1 class="contact-heading">{{ content.hello }}</h1>
     <p class="contact-intro">{{ content.intro }}</p>
 
-    <!-- 社交平台卡片网格 -->
+    <!-- 社交平台卡片网格：由 /api/site/config 的 contact.socials 驱动 -->
     <div class="social-grid">
-      <!-- 邮箱卡片：不可点击，文字可选中复制 -->
-      <div class="social-card social-card--email">
-        <el-icon :size="48" class="social-icon"><Message /></el-icon>
-        <h3 class="social-name">{{ content.emailMeLabel }}</h3>
-        <p class="social-account social-account--selectable">{{ content.email }}</p>
-      </div>
-
-      <!-- 微信公众号卡片：hover 显示提示浮层 -->
       <div
-        class="social-card social-card--wechat"
-        @click="openLink('https://mp.weixin.qq.com/s/MD5T-BsAgUi9yUo6ISY1CA')"
-        @mouseenter="showWechatTooltip = true"
-        @mouseleave="showWechatTooltip = false"
+        v-for="item in socials"
+        :key="item.key"
+        class="social-card"
+        :class="`social-card--${item.key}`"
+        @click="openLink(item)"
+        @mouseenter="hoverKey = item.key"
+        @mouseleave="hoverKey = ''"
       >
-        <el-icon :size="48" class="social-icon"><ChatDotSquare /></el-icon>
-        <h3 class="social-name">{{ appStore.language === 'zh' ? '公众号' : 'WeChat' }}</h3>
-        <p class="social-account">{{ content.socials.wechat }}</p>
-        <!-- 悬浮提示 -->
-        <div v-if="showWechatTooltip" class="social-tooltip">
+        <el-icon :size="48" class="social-icon">
+          <Message v-if="item.icon === 'message'" />
+          <ChatDotSquare v-else-if="item.icon === 'chat'" />
+          <VideoCamera v-else-if="item.icon === 'video-camera'" />
+          <Monitor v-else-if="item.icon === 'monitor'" />
+          <Camera v-else />
+        </el-icon>
+        <h3 class="social-name">{{ item.name }}</h3>
+        <p class="social-account" :class="{ 'social-account--selectable': !item.clickable }">
+          {{ item.account }}
+        </p>
+        <!-- 悬浮提示：接口下发 tooltip 时才显示 -->
+        <div v-if="item.tooltip && hoverKey === item.key" class="social-tooltip">
           <p class="social-tooltip-text">
-            Click to view profile<br />
-            <span class="social-tooltip-sub">mp.weixin.qq.com</span>
+            {{ item.tooltip.text }}<br />
+            <span class="social-tooltip-sub">{{ item.tooltip.domain }}</span>
           </p>
         </div>
-      </div>
-
-      <!-- 小红书卡片：hover 显示提示浮层 -->
-      <div
-        class="social-card social-card--red"
-        @click="openLink('https://www.xiaohongshu.com/user/profile/61bbb882000000001000e80d')"
-        @mouseenter="showRedTooltip = true"
-        @mouseleave="showRedTooltip = false"
-      >
-        <el-icon :size="48" class="social-icon"><Camera /></el-icon>
-        <h3 class="social-name">{{ appStore.language === 'zh' ? '小红书' : 'RED' }}</h3>
-        <p class="social-account">{{ content.socials.xiaohongshu }}</p>
-        <div v-if="showRedTooltip" class="social-tooltip">
-          <p class="social-tooltip-text">
-            Click to view profile<br />
-            <span class="social-tooltip-sub">xiaohongshu.com</span>
-          </p>
-        </div>
-      </div>
-
-      <!-- B站卡片：hover 显示提示浮层 -->
-      <div
-        class="social-card social-card--bili"
-        @click="openLink('https://b23.tv/XNNX02Q')"
-        @mouseenter="showBiliTooltip = true"
-        @mouseleave="showBiliTooltip = false"
-      >
-        <el-icon :size="48" class="social-icon"><VideoCamera /></el-icon>
-        <h3 class="social-name">Bilibili</h3>
-        <p class="social-account">{{ content.socials.bilibili }}</p>
-        <div v-if="showBiliTooltip" class="social-tooltip">
-          <p class="social-tooltip-text">
-            Click to view profile<br />
-            <span class="social-tooltip-sub">b23.tv/XNNX02Q</span>
-          </p>
-        </div>
-      </div>
-
-      <!-- 500px 摄影社区卡片 -->
-      <div
-        class="social-card social-card--px"
-        @click="openLink('https://500px.com.cn/LuN3cy')"
-      >
-        <el-icon :size="48" class="social-icon"><Camera /></el-icon>
-        <h3 class="social-name">500px</h3>
-        <p class="social-account">{{ content.socials.px500 }}</p>
-      </div>
-
-      <!-- GitHub 卡片 -->
-      <div
-        class="social-card social-card--github"
-        @click="openLink('https://github.com/LuN3cy')"
-      >
-        <el-icon :size="48" class="social-icon"><Monitor /></el-icon>
-        <h3 class="social-name">{{ content.githubLabel }}</h3>
-        <p class="social-account">@LuN3cy</p>
       </div>
     </div>
   </div>
@@ -96,20 +43,44 @@
 import { ref, computed } from 'vue'
 import { Message, ChatDotSquare, Camera, VideoCamera, Monitor } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { CONTACT_DATA } from '@/data/home'
+import { useSiteStore } from '@/store/site'
+import { pickText } from '@/utils/i18n'
 
 const appStore = useAppStore()
-// 联系方式内容数据
-const content = computed(() => CONTACT_DATA[appStore.language])
+const siteStore = useSiteStore()
 
-// 各社交平台悬浮提示是否显示
-const showWechatTooltip = ref(false)
-const showRedTooltip = ref(false)
-const showBiliTooltip = ref(false)
+// 当前 hover 的社交卡片（用于显示悬浮提示）
+const hoverKey = ref('')
 
-// 在新标签页打开链接
-function openLink(link: string) {
-  window.open(link, '_blank')
+// 联系页文案：来自 /api/site/config 的 contact 节点
+const content = computed(() => {
+  const contact = siteStore.contact
+  const lang = appStore.language
+  return {
+    hello: pickText(contact?.hello, lang),
+    intro: pickText(contact?.intro, lang),
+    email: contact?.email ?? '',
+    emailMeLabel: pickText(contact?.emailLabel, lang)
+  }
+})
+
+// 社交平台卡片：顺序、文案、链接、是否可点、悬浮提示均由接口决定
+const socials = computed(() =>
+  (siteStore.contact?.socials ?? []).map(item => ({
+    key: item.key,
+    name: pickText(item.name, appStore.language, item.key),
+    account: item.account,
+    url: item.url,
+    icon: item.icon,
+    clickable: item.clickable !== false,
+    tooltip: item.tooltip
+  }))
+)
+
+// 在新标签页打开链接（不可点或空链接时忽略）
+function openLink(item: { url: string; clickable: boolean }) {
+  if (!item.clickable || !item.url) return
+  window.open(item.url, '_blank')
 }
 </script>
 
@@ -206,7 +177,8 @@ function openLink(link: string) {
     }
   }
 
-  &--red {
+  &--red,
+  &--xiaohongshu {
     cursor: pointer;
 
     &:hover {
@@ -218,7 +190,8 @@ function openLink(link: string) {
     }
   }
 
-  &--bili {
+  &--bili,
+  &--bilibili {
     cursor: pointer;
 
     &:hover {
@@ -230,7 +203,8 @@ function openLink(link: string) {
     }
   }
 
-  &--px {
+  &--px,
+  &--px500 {
     cursor: pointer;
 
     &:hover {

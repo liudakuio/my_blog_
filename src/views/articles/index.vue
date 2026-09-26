@@ -21,7 +21,7 @@
               :key="cat"
               class="category-btn"
               :class="{ 'category-btn--active': filter === cat }"
-              @click="filter = cat"
+              @click="selectCategory(cat)"
             >
               {{ articleLabels[cat] || cat }}
             </button>
@@ -36,8 +36,8 @@
           :key="cat"
           class="category-pill"
           :class="{ 'category-pill--active': filter === cat }"
-          @click="filter = cat"
-        >
+          @click="selectCategory(cat)"
+          >
           {{ articleLabels[cat] || cat }}
         </button>
       </div>
@@ -47,11 +47,11 @@
         <!-- 顶部：文章数量 + 日期排序切换 -->
         <div class="article-list-head">
           <div class="article-count">
-            {{ filteredArticles.length }} {{ appStore.language === 'zh' ? '篇文章' : 'Articles' }}
+            {{ articleStore.total }} {{ appStore.language === 'zh' ? '篇文章' : 'Articles' }}
           </div>
           <button
             class="sort-btn"
-            @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
+            @click="toggleSort()"
           >
             <el-icon :size="16"><Calendar /></el-icon>
             <span>{{ appStore.language === 'zh' ? '时间排序' : 'Date' }}</span>
@@ -85,7 +85,7 @@
                 </div>
                 <!-- 左上角分类标签 -->
                 <div class="article-category-tag">
-                  {{ (articleLabels[article.category] || article.category).split('|')[0].trim() }}
+                  {{ articleShortLabels[article.category] || article.category }}
                 </div>
               </div>
               <!-- 文字信息：标题 + 日期 -->
@@ -110,12 +110,22 @@
           </div>
         </div>
 
-        <!-- 无文章时的空状态 -->
+        <!-- 加载中 / 无文章时的空状态 -->
+        <div v-if="loading" class="article-empty">
+          <p class="article-empty-text">{{ appStore.language === 'zh' ? '加载中…' : 'Loading…' }}</p>
+        </div>
         <div
-          v-if="filteredArticles.length === 0"
+          v-else-if="filteredArticles.length === 0"
           class="article-empty"
         >
           <p class="article-empty-text">{{ appStore.language === 'zh' ? '暂无文章' : 'No articles found' }}</p>
+        </div>
+
+        <!-- 还有更多时显示加载更多 -->
+        <div v-if="articleStore.hasMore()" class="article-more">
+          <button class="more-btn" @click="handleLoadMore">
+            {{ appStore.language === 'zh' ? '加载更多' : 'Load more' }}
+          </button>
         </div>
       </div>
     </div>
@@ -123,28 +133,79 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Filter, Calendar, ArrowUp, ArrowDown, Reading, TopRight } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { ARTICLES_PAGE_DATA, ARTICLE_DATA, ARTICLE_LABELS } from '@/data/articles'
-import { ArticleCategory } from '@/types'
+import { useSiteStore } from '@/store/site'
+import { useArticleStore } from '@/store/articles'
+import { pickText } from '@/utils/i18n'
 
 const appStore = useAppStore()
-// 当前筛选分类
+const siteStore = useSiteStore()
+const articleStore = useArticleStore()
+
+// 当前筛选分类 / 排序方向（切换后重新请求接口）
 const filter = ref<string>('All')
-// 日期排序方向：desc=最新优先，asc=最早优先
 const sortOrder = ref<'asc' | 'desc'>('desc')
+const loading = computed(() => articleStore.loading)
 
 // 页面标题和描述
-const pageData = computed(() => ARTICLES_PAGE_DATA[appStore.language])
-// 所有可用分类
-const categories = ['All', ...Object.values(ArticleCategory)]
-// 分类标签的中英文映射
-const articleLabels = computed(() => ARTICLE_LABELS[appStore.language])
+const pageData = computed(() => {
+  const page = siteStore.pages?.articles
+  return {
+    title: pickText(page?.title, appStore.language),
+    description: pickText(page?.description, appStore.language)
+  }
+})
 
-// 获取文章的当前语言内容
-function articleContent(article: any) {
-  return appStore.language === 'zh' ? article.zh : article.en
+// 全部分类：接口下发的字典 + "全部"
+const categories = computed(() => ['All', ...articleStore.categories.map(item => item.value)])
+
+// 分类按钮文案
+const articleLabels = computed(() => {
+  const map: Record<string, string> = { All: appStore.language === 'zh' ? '全部' : 'All' }
+  for (const item of articleStore.categories) {
+    const value = item.zh ?? item.en
+    map[item.value] = pickText(value?.label ?? item.label, appStore.language, item.value)
+  }
+  return map
+})
+
+// 封面角标文案（接口已提供独立字段，无需再按 | 截断）
+const articleShortLabels = computed(() => {
+  const map: Record<string, string> = {}
+  for (const item of articleStore.categories) {
+    const value = item.zh ?? item.en
+    map[item.value] = pickText(value?.shortLabel ?? value?.label ?? item.label, appStore.language, item.value)
+  }
+  return map
+})
+
+// 文章列表：接口已按分类与日期排序返回
+const filteredArticles = computed(() =>
+  articleStore.articles.map(article => ({
+    id: article.id,
+    ...article.common,
+    ...(appStore.language === 'zh' ? article.zh : article.en)
+  }))
+)
+
+// 切换分类：重新请求
+function selectCategory(cat: string) {
+  if (filter.value === cat) return
+  filter.value = cat
+  articleStore.setCategory(cat)
+}
+
+// 切换日期排序方向：重新请求
+function toggleSort() {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  articleStore.setSort(sortOrder.value === 'asc' ? 'date_asc' : 'date_desc')
+}
+
+// 加载下一页
+async function handleLoadMore() {
+  await articleStore.loadMore()
 }
 
 // 在新标签页打开文章链接
@@ -152,19 +213,9 @@ function openLink(link: string) {
   window.open(link, '_blank')
 }
 
-// 筛选 + 排序后的文章列表
-const filteredArticles = computed(() => {
-  return ARTICLE_DATA
-    .filter(a => filter.value === 'All' || a.common.category === filter.value)
-    .sort((a, b) => {
-      const dateA = new Date(a.common.date || 0).getTime()
-      const dateB = new Date(b.common.date || 0).getTime()
-      return sortOrder.value === 'asc' ? dateA - dateB : dateB - dateA
-    })
-    .map(a => ({
-      ...a.common,
-      ...articleContent(a)
-    }))
+onMounted(() => {
+  articleStore.loadCategories()
+  articleStore.loadArticles()
 })
 </script>
 
@@ -626,6 +677,34 @@ const filteredArticles = computed(() => {
 
   @media (min-width: 768px) {
     display: inline;
+  }
+}
+
+/* 加载更多按钮 */
+.article-more {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.more-btn {
+  padding: 0.75rem 2rem;
+  border: 2px solid #000000;
+  border-radius: 9999px;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+  transition: opacity 0.3s, border-color 0.3s, color 0.3s;
+
+  &:hover {
+    opacity: 0.7;
+  }
+
+  .dark & {
+    border-color: #ffffff;
+    color: #ffffff;
   }
 }
 

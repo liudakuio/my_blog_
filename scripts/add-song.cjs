@@ -1,4 +1,4 @@
-// 网易云音乐链接解析工具：输入歌曲链接，自动获取歌名/歌手/封面并追加到 music.ts
+// 网易云音乐链接解析工具：输入歌曲链接，自动获取歌名/歌手/封面并生成 blog_music 表的 INSERT 语句
 const https = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,8 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const MUSIC_FILE_PATH = path.join(__dirname, '../src/data/music.ts');
+// 歌单已由后端 DB 维护（GET /api/music/playlist），这里输出可直接执行的 SQL
+const SEED_FILE_PATH = path.join(__dirname, 'song-seed.sql');
 
 console.log('🎵 网易云音乐链接解析工具');
 console.log('请输入歌曲链接 (例如: https://music.163.com/song?id=1824637):');
@@ -43,35 +44,22 @@ rl.on('line', (input) => {
         }
 
         const song = json.songs[0];
-        const newSong = {
-          id: parseInt(song.id),
-          title: song.name,
-          artist: song.artists.map(a => a.name).join(' / '),
-          cover: song.album.picUrl
-        };
+        const title = song.name;
+        const artist = song.artists.map(a => a.name).join(' / ');
+        const cover = song.album.picUrl;
 
         console.log('✅ 获取成功!');
-        console.log('歌名:', newSong.title);
-        console.log('歌手:', newSong.artist);
-        
-        // Read and update file
-        let fileContent = fs.readFileSync(MUSIC_FILE_PATH, 'utf8');
-        
-        // Find the closing bracket of the array
-        const insertIndex = fileContent.lastIndexOf('];');
-        
-        if (insertIndex === -1) {
-          console.error('❌ 无法解析 music.ts 文件结构');
-          return;
-        }
+        console.log('歌名:', title);
+        console.log('歌手:', artist);
 
-        const newEntryString = `  {\n    id: ${newSong.id},\n    title: "${newSong.title}",\n    artist: "${newSong.artist}",\n    cover: "${newSong.cover}"\n  },\n`;
-        
-        const newContent = fileContent.slice(0, insertIndex) + newEntryString + fileContent.slice(insertIndex);
-        
-        fs.writeFileSync(MUSIC_FILE_PATH, newContent, 'utf8');
-        console.log(`🎉 歌曲已自动添加到 ${MUSIC_FILE_PATH}`);
-        
+        // 生成 INSERT 语句：audio 需手动补充（网易不提供直链）
+        const insert = `INSERT INTO blog_music (id, title, artist, cover, audio, sort, status) `
+          + `VALUES ('${id}', '${escapeSql(title)}', '${escapeSql(artist)}', '${escapeSql(cover)}', '', 0, '0');\n`;
+
+        fs.appendFileSync(SEED_FILE_PATH, insert, 'utf8');
+        console.log(`🎉 已生成 INSERT 语句并写入 ${SEED_FILE_PATH}`);
+        console.log('⚠️  请补充 audio 字段（音频地址需支持 Range 请求）后再执行');
+
       } catch (e) {
         console.error('❌ 解析错误:', e);
       } finally {
@@ -83,3 +71,7 @@ rl.on('line', (input) => {
     rl.close();
   });
 });
+
+function escapeSql(value) {
+  return String(value || '').replace(/'/g, "''");
+}

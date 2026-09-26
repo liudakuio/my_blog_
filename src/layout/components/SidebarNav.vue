@@ -55,15 +55,16 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { NAV_ITEMS } from '@/data/navigation'
+import { useSiteStore } from '@/store/site'
 
 const router = useRouter()
 const appStore = useAppStore()
+const siteStore = useSiteStore()
 // 是否已滚动（用于切换导航栏样式）
 const isScrolled = ref(false)
 
-// 导航菜单项（根据当前语言切换）
-const navItems = computed(() => NAV_ITEMS[appStore.language])
+// 导航菜单项：来自 /api/site/config，按当前语言解析文案
+const navItems = computed(() => siteStore.navItems(appStore.language))
 
 // 跳转到指定页签：更新 store 状态 + 路由跳转 + 回到顶部
 function goTo(tab: string) {
