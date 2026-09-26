@@ -137,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
@@ -283,7 +283,20 @@ async function handleDelete(row: any) {
   }
 }
 
+// 首次进入自动加载列表
 onMounted(load)
+
+// 复用同一组件时（多个菜单共用 crud 视图），切换菜单不会重新触发 onMounted，
+// 监听路由变化，资源（菜单）切换时自动重置筛选并重新调用列表接口
+watch(
+  () => route.fullPath,
+  () => {
+    if (!resource.value) return
+    // 清空筛选条件，避免上一个菜单的筛选带入当前菜单
+    Object.keys(filters).forEach((k) => (filters[k] = ''))
+    load()
+  }
+)
 </script>
 
 <style lang="less" scoped>
