@@ -73,61 +73,88 @@
     </el-table>
 
     <!-- 新增 / 编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="640px" destroy-on-close>
-      <el-form ref="formRef" :model="formData" label-width="110px" :rules="formRules">
-        <el-form-item
-          v-for="field in formFields"
-          :key="field.key"
-          :label="field.label"
-          :prop="field.key"
-        >
-          <!-- 文本域 -->
-          <el-input
-            v-if="field.type === 'textarea'"
-            v-model="formData[field.key]"
-            type="textarea"
-            :rows="3"
-            :placeholder="field.label"
-          />
-          <!-- 数字 -->
-          <el-input-number
-            v-else-if="field.type === 'number'"
-            v-model="formData[field.key]"
-            :controls="false"
-            class="w-full"
-          />
-          <!-- 下拉 -->
-          <el-select
-            v-else-if="field.type === 'select'"
-            v-model="formData[field.key]"
-            class="w-full"
-            :placeholder="field.label"
-          >
-            <el-option
-              v-for="opt in field.options"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </el-select>
-          <!-- 日期时间 -->
-          <el-date-picker
-            v-else-if="field.type === 'datetime'"
-            v-model="formData[field.key]"
-            type="datetime"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            class="w-full"
-          />
-          <!-- 图片 / 链接：URL 输入 + 预览 -->
-          <template v-else>
-            <el-input v-model="formData[field.key]" :placeholder="field.label + ' URL'">
-              <template v-if="field.type === 'image' && formData[field.key]" #append>
-                <el-image :src="formData[field.key]" fit="cover" class="mini-thumb" />
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      :width="dialogWidth"
+      :fullscreen="hasMarkdown"
+      :show-close="!hasMarkdown"
+      destroy-on-close
+    >
+      <template #header>
+        <div class="crud-dialog-header">
+          <span class="crud-dialog-title">{{ dialogTitle }}</span>
+          <el-button v-if="hasMarkdown" class="crud-return-btn" @click="dialogVisible = false">
+            返回
+          </el-button>
+        </div>
+      </template>
+      <div class="crud-form-scroll" :class="{ 'crud-form-scroll--full': hasMarkdown }">
+        <el-form ref="formRef" :model="formData" label-width="110px" :rules="formRules">
+          <template v-for="field in formFieldsGrouped" :key="field.key">
+            <el-divider v-if="field.showDivider && field.section" content-position="left" class="crud-section">
+              {{ field.section }}
+            </el-divider>
+            <el-form-item :label="field.label" :prop="field.key">
+              <!-- 文本域 -->
+              <el-input
+                v-if="field.type === 'textarea'"
+                v-model="formData[field.key]"
+                type="textarea"
+                :rows="3"
+                :placeholder="field.label"
+              />
+              <!-- 数字 -->
+              <el-input-number
+                v-else-if="field.type === 'number'"
+                v-model="formData[field.key]"
+                :controls="false"
+                class="w-full"
+              />
+              <!-- 下拉 -->
+              <el-select
+                v-else-if="field.type === 'select'"
+                v-model="formData[field.key]"
+                class="w-full"
+                :placeholder="field.label"
+              >
+                <el-option
+                  v-for="opt in field.options"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
+              <!-- 日期时间 -->
+              <el-date-picker
+                v-else-if="field.type === 'datetime'"
+                v-model="formData[field.key]"
+                type="datetime"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                class="w-full"
+              />
+              <!-- Markdown 编辑器（自带实时分屏预览） -->
+              <template v-else-if="field.type === 'markdown'">
+                <MdEditor
+                  v-model="formData[field.key]"
+                  :theme="mdTheme"
+                  :height="mdHeight"
+                  :preview="true"
+                  class="md-editor"
+                />
               </template>
-            </el-input>
+              <!-- 图片 / 链接：URL 输入 + 预览 -->
+              <template v-else>
+                <el-input v-model="formData[field.key]" :placeholder="field.label + ' URL'">
+                  <template v-if="field.type === 'image' && formData[field.key]" #append>
+                    <el-image :src="formData[field.key]" fit="cover" class="mini-thumb" />
+                  </template>
+                </el-input>
+              </template>
+            </el-form-item>
           </template>
-        </el-form-item>
-      </el-form>
+        </el-form>
+      </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
@@ -143,9 +170,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/user'
+import { useAppStore } from '@/store/app'
 import { adminList, adminGet, adminCreate, adminUpdate, adminDelete } from '@/api/admin'
 import { SCHEMA_MAP } from './schema'
 import type { FieldSchema } from './types'
+import { MdEditor } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -154,6 +184,20 @@ const { permissions } = storeToRefs(userStore)
 const resource = computed(() => (route.meta.resource as string) || '')
 const schema = computed(() => SCHEMA_MAP[resource.value])
 const editable = computed(() => userStore.canEdit(resource.value))
+
+const appStore = useAppStore()
+// Markdown 编辑器主题跟随全局深色模式
+const mdTheme = computed(() => (appStore.isDark ? 'dark' : 'light'))
+// 当前资源是否含 Markdown 字段（含则加宽弹窗以容纳编辑器 + 实时预览）
+const hasMarkdown = computed(() =>
+  (schema.value?.fields || []).some((f) => f.type === 'markdown')
+)
+const dialogWidth = computed(() => (hasMarkdown.value ? '1080px' : '640px'))
+// 编辑器高度：全屏时随视口撑满，普通弹窗固定 400px
+const mdHeight = computed(() => {
+  void dialogVisible.value
+  return hasMarkdown.value ? Math.max(420, window.innerHeight - 360) : 400
+})
 
 const list = ref<any[]>([])
 const loading = ref(false)
@@ -167,6 +211,14 @@ const filterFields = computed(() =>
 const filters = reactive<Record<string, string>>({})
 const tableFields = computed(() => (schema.value?.fields || []).filter((f) => f.table))
 const formFields = computed(() => (schema.value?.fields || []).filter((f) => f.form))
+
+// 表单字段分组：按 section 变化插入分区标题（首个字段前也显示其所属分区）
+const formFieldsGrouped = computed(() =>
+  formFields.value.map((f, i) => ({
+    ...f,
+    showDivider: i === 0 || f.section !== formFields.value[i - 1].section
+  }))
+)
 
 // 表单校验规则（必填项）
 const formRules = computed(() => {
@@ -389,6 +441,53 @@ watch(
 
   .dark & {
     color: #cfcfcf;
+  }
+}
+
+// 弹窗头部：标题居左，返回按钮居右
+.crud-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+
+  .crud-dialog-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+
+    .dark & {
+      color: #f0f0f0;
+    }
+  }
+
+  .crud-return-btn {
+    margin-left: auto;
+  }
+}
+
+// 弹窗内容区滚动容器：长表单可滚动，页脚固定
+.crud-form-scroll {
+  max-height: 68vh;
+  overflow-y: auto;
+  padding-right: 8px;
+
+  // 全屏模式：撑满视口（扣除头部与页脚）
+  &.crud-form-scroll--full {
+    max-height: calc(100vh - 160px);
+  }
+
+  // 分区标题
+  .crud-section {
+    margin: 4px 0 18px;
+    color: #9ca3af;
+    font-size: 13px;
+    font-weight: 600;
+
+    .dark & {
+      color: #6b7280;
+    }
   }
 }
 

@@ -190,14 +190,15 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
     resource: 'article',
     title: '文章列表',
     fields: [
-      strId(),
-      f('category', '分类', 'text', { width: 120 }),
-      f('link', '链接', 'link', { table: false }),
-      f('cover_image', '封面', 'image', { width: 90 }),
-      f('publish_date', '发布日期', 'datetime', { width: 170 }),
-      f('sort', '排序', 'number', { width: 90 }),
-      f('status', '状态', 'select', { options: STATUS, width: 90 }),
-      f('remark', '备注', 'textarea', { table: false })
+      { ...strId(), section: '基础信息' },
+      f('category', '分类', 'text', { width: 120, section: '基础信息' }),
+      f('link', '链接', 'link', { table: false, section: '基础信息' }),
+      f('cover_image', '封面', 'image', { width: 90, section: '基础信息' }),
+      f('publish_date', '发布日期', 'datetime', { width: 170, section: '基础信息' }),
+      f('sort', '排序', 'number', { width: 90, section: '基础信息' }),
+      f('status', '状态', 'select', { options: STATUS, width: 90, section: '基础信息' }),
+      f('remark', '备注', 'textarea', { table: false, section: '基础信息' }),
+      f('content', '正文', 'markdown', { table: false, form: true, section: '正文内容' })
     ]
   },
   // 13 文章多语

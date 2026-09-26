@@ -65,7 +65,7 @@
             v-for="article in filteredArticles"
             :key="article.id"
             class="article-card"
-            @click="openLink(article.link)"
+            @click="openArticle(article.id)"
           >
             <!-- 文章卡片：封面图 + 标题 + 日期 -->
             <div class="article-card-inner">
@@ -103,7 +103,7 @@
                 <div class="article-meta">
                   <span>{{ article.date || 'No Date' }}</span>
                   <span class="article-dot"></span>
-                  <span class="article-source">Read on WeChat</span>
+                  <span class="article-source">{{ appStore.language === 'zh' ? '阅读全文' : 'Read article' }}</span>
                 </div>
               </div>
             </div>
@@ -134,6 +134,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Filter, Calendar, ArrowUp, ArrowDown, Reading, TopRight } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
@@ -143,6 +144,7 @@ import { pickText } from '@/utils/i18n'
 const appStore = useAppStore()
 const siteStore = useSiteStore()
 const articleStore = useArticleStore()
+const router = useRouter()
 
 // 当前筛选分类 / 排序方向（切换后重新请求接口）
 const filter = ref<string>('All')
@@ -208,9 +210,9 @@ async function handleLoadMore() {
   await articleStore.loadMore()
 }
 
-// 在新标签页打开文章链接
-function openLink(link: string) {
-  window.open(link, '_blank')
+// 进入站内文章详情页（不再跳转微信公众号）
+function openArticle(id: string) {
+  router.push({ name: 'ArticleDetail', params: { id } })
 }
 
 onMounted(() => {

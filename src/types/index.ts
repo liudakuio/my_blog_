@@ -144,12 +144,16 @@ export interface Article {
     link: string
     coverImage?: string
     date?: string
+    /** 详情页正文配图（可选） */
+    images?: string[]
   }
   zh: {
     title: string
+    content: string
   }
   en: {
     title: string
+    content: string
   }
 }
 

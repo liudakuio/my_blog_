@@ -70,6 +70,7 @@ const publicRoutes: RouteRecordRaw[] = [
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/index.vue'), meta: { title: '主页', titleEn: 'Home' } },
       { path: 'portfolio', name: 'Portfolio', component: () => import('@/views/portfolio/index.vue'), meta: { title: '作品', titleEn: 'Portfolio' } },
       { path: 'articles', name: 'Articles', component: () => import('@/views/articles/index.vue'), meta: { title: '文章', titleEn: 'Articles' } },
+      { path: 'articles/:id', name: 'ArticleDetail', component: () => import('@/views/articles/detail.vue'), meta: { title: '文章详情', titleEn: 'Article' } },
       { path: 'contact', name: 'Contact', component: () => import('@/views/contact/index.vue'), meta: { title: '联系', titleEn: 'Contact' } }
     ]
   }
