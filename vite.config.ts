@@ -14,7 +14,15 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    cors: true
+    cors: true,
+    // 开发态将 /api 代理到后台服务（D:/lzkgit/my_blog_bak，端口 8080），
+    // 复用现有 baseURL: '/api'，避免跨域凭据问题。
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
   },
   build: {
     outDir: 'dist',
