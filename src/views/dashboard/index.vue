@@ -91,48 +91,23 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Location } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { useSiteStore } from '@/store/site'
-import { pickText } from '@/utils/i18n'
-import { Category, type HeroItem } from '@/types'
+import { HOME_DATA, CONTACT_DATA, type HeroItem } from '@/data/home'
+import { Category } from '@/types'
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 
 const router = useRouter()
 const appStore = useAppStore()
-const siteStore = useSiteStore()
 
 // 当前筛选的作品分类（由 Hero 标题点击设置）
 const portfolioCategory = ref<string>('All')
 
-// 首页内容：来自 /api/site/config 的 home 节点
-const content = computed(() => {
-  const home = siteStore.home
-  const lang = appStore.language
-  return {
-    heroItems: (home?.heroItems ?? []).map(item => ({
-      text: pickText(item.text, lang),
-      annotation: pickText(item.annotation, lang),
-      category: (item.category ?? null) as Category | null
-    })),
-    intro: pickText(home?.intro, lang),
-    selectedWorks: pickText(home?.selectedWorks, lang),
-    years: home?.years ?? ''
-  }
-})
-
-// 首页右侧联系卡片
-const contactContent = computed(() => {
-  const card = siteStore.home?.contactCard
-  const lang = appStore.language
-  return {
-    baseLabel: card?.baseLabel ?? '',
-    locationValue: pickText(card?.locationValue, lang),
-    contactLabel: pickText(card?.contactLabel, lang),
-    tooltip: pickText(card?.tooltip, lang)
-  }
-})
+// 首页内容数据（本地维护，不读取后端 home 节点）
+const content = computed(() => HOME_DATA[appStore.language])
+// 首页右侧联系卡片数据（本地维护）
+const contactContent = computed(() => CONTACT_DATA[appStore.language])
 
 // Hero 大标题列表
-const heroItems = computed(() => content.value.heroItems)
+const heroItems = computed(() => content.value.heroItems || [])
 // Toast 提示是否显示
 const showToast = ref(false)
 
