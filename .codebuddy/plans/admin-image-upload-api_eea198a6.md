@@ -63,51 +63,70 @@ todos:
 
 ## 产品概述
 
-后台管理端目前所有图片字段（作品封面 `cover`、文章封面 `coverImage`、图集 `image_url`）都是**手填 URL 的输入框**，没有任何上传代码（全站搜索 `upload` 结果为 0）。后端已提供上传接口但前端从未调用。本次将图片字段改为「上传控件」，真正调用后端接口，并移除手填入口。
+后台管理端新增「系统管理」模块，用于维护平台的用户、菜单与角色三类系统数据；部门、岗位、日志三个入口保留在侧边栏，但点击后进入统一的「开发中」提示页。
 
 ## 核心功能
 
-1. **图片上传**：表单中 `image` 类型字段提供上传按钮，选择本地图片后调用后端 `POST /api/admin/upload/image` 上传。
-2. **回填与预览**：上传成功后把后端返回的相对 URL（如 `/uploads/2026/09/26/uuid.jpg`）写回该字段，并在表单内显示缩略图预览，支持点击放大。
-3. **只允许上传**：移除 URL 输入框，图片值统一为 `/uploads` 相对路径；支持「重新上传」覆盖与「移除」清空。
-4. **前端校验**：与后端一致的白名单（jpg/jpeg/png/gif/webp）与大小上限（5MB），不合规直接提示且不发请求。
-5. **权限控制**：按钮受 `blog:upload:edit` 权限约束，无权限时禁用。
-6. **开发态可见**：补齐 `/uploads` 的 dev 代理，否则预览与列表缩略图在开发环境 404。
+- **系统管理菜单**：侧边栏出现「系统管理」目录及用户管理、菜单管理、角色管理、部门管理、岗位管理、日志管理六个子菜单，点击后进入各自页面（不再落到通用内容管理页）。
+- **用户管理**：按用户名、状态筛选查询；新增用户（用户名与密码必填）；编辑用户信息（密码留空表示不修改）；删除用户（内置管理员不可删，给出明确提示）。列表中不展示密码。
+- **菜单管理**：平铺列表与树形结构切换查看；新增菜单（名称必填，可指定上级菜单、类型、路径、组件、图标、权限标识、排序）；编辑；删除（存在子菜单时提示需先删除子菜单）。
+- **角色管理**：列表查询；新增与编辑时可勾选该角色可访问的菜单；删除角色（内置管理员角色不可删）。
+- **开发中占位**：部门、岗位、日志三个入口可见可点，进入后展示统一的功能开发中提示。
+- **权限控制**：新增、编辑、删除等写操作按 `system:{资源}:edit` 权限显示或禁用。
 
-## 边界
+## 视觉效果
 
-- 只改表单图片字段；**链接字段**（videoUrl / figmaUrl / websiteUrl / githubUrl / audio / link）继续保留 URL 输入框。
-- 不做 Markdown 编辑器内上传，不做多图批量上传。
+沿用后台现有卡片化风格与深浅色双主题：白色/深色卡片容器、圆角工具栏、表格斑马纹、按钮与表单沿用后台既有控件观感，保证与内容管理各页视觉一致。
+
 
 ## 技术栈
 
-沿用现有项目栈：Vue 3 + TypeScript + Element Plus（`el-upload` / `el-image`）+ Pinia + Vite；请求复用 `src/utils/request.ts` 的 axios 实例。
+沿用现有项目栈，不引入新框架：
+
+- Vue 3 + TypeScript + `<script setup>`
+- Element Plus（表格、表单、弹窗、树形控件、消息提示）
+- Pinia（用户态与权限）+ Vue Router 4（动态路由）
+- Vite；请求复用 `src/utils/request.ts` 的 axios 实例
 
 ## 实现思路
 
-新增一个受控的图片上传组件，在通用 CRUD 表单里为 `image` 类型字段单独增加一个渲染分支，把该字段从「文本输入」切换为「上传控件」。上传走已有的 axios 实例，因此自动带上 JWT、自动享受统一的错误提示与 401 处理，无需重复实现鉴权与报错。
+核心是「按权限前缀分流路由 + 新增三个专用页面 + 新增系统接口层」。
+
+当前 `buildDynamicRoutes` 把所有叶子菜单都指向通用 CRUD 页，并用 `perms.split(':')[1]` 取资源名，`system:user:edit` 会被解析成资源 `user`，从而请求 `/api/admin/user` 触发后端 `400 未知资源`。因此在路由构建处增加 `system:` 前缀判断：命中则渲染 `views/admin/system/{资源}/index.vue`，否则完整保留原有 `blog:` 分支逻辑，确保内容管理功能零影响。
+
+三个页面不复用通用 CRUD，因为它们的主键名、字段语义与交互（角色需勾选菜单树、菜单需树形切换、用户密码为只写字段）都与通用 CRUD 不同，独立实现更清晰。
 
 **关键技术决策**：
 
-1. **用 `:http-request` 自定义上传，而不是 `el-upload` 的 `action`**：`action` 不会携带项目统一注入的 `Authorization` 头；自定义 `http-request` 直接复用 `service`，token、错误提示、401 跳转全部自动生效。
-2. **抽成独立组件 `ImageUpload.vue` 而非内联进 `index.vue`**：`index.vue` 已近 500 行且是通用视图，上传逻辑（校验、请求、上传态、预览、权限）内聚性高，抽组件可保持主视图可读，且便于复用。
-3. **校验前置 + 后端二次校验**：前端按后端 `application.yml` 的白名单与 5MB 上限拦截，减少无效请求；后端仍有扩展名、`contentType`、`size` 三重校验，双保险。
-4. **`FormData` 不手动设置 `Content-Type`**：由 axios 自动带 boundary，手动设置会导致后端解析 multipart 失败。
-5. **不硬编码后端地址**：组件只接收/回传 URL 字符串，后端前缀变化（如改 CDN）前端无需改动。
+1. **仅改造 `buildDynamicRoutes` 一处，不动侧边栏与菜单配置**：`config/menu.ts` 的 `menuRoutePath` 对 `blog/system/user` 已产出 `/admin/system/user`，与文档建议的路由路径完全一致，侧边栏会自动渲染出「系统管理」及子菜单，无需改动。
+2. **部门/岗位/日志路由到共享占位页**：三者无后端接口也无页面文件，若不特殊处理，动态 `import()` 会因文件不存在而解析失败，因此统一指向 `Placeholder.vue`。
+3. **密码只写不读**：新增必填；编辑时留空即不提交改密码；列表与详情不回显（后端本身也不返回）。
+4. **业务校验交给后端**：用户名重复、roleKey 唯一、内置对象不可删、有子菜单不可删均由后端返回 400 与中文提示，前端依赖响应拦截器统一弹提示，不重复实现校验。
+5. **权限复用 `hasPerm`**：与通用 CRUD 页的 `editable` 一致，改用 `hasPerm('system:' + resource + ':edit')` 控制写操作按钮。
 
 ## 实现要点（防回归）
 
-- **必须区分 `image` 与 `link` 分支**：当前二者共用兜底 `v-else`。新增 `image` 分支后，需把兜底分支里 `v-if="field.type === 'image'"` 的 `#append` 预览删掉（否则成死代码），兜底只服务 `link` 与文本。
-- **`el-upload` 的 `http-request` 必须回调 `options.onSuccess` / `onError`**，否则组件内部上传态不会复位、loading 会卡住。
-- **`/uploads` 代理是必须的**：`vite.config.ts` 当前只代理 `/api`。后端返回的 URL 是 `/uploads/...`，不代理会在 dev 下打到 Vite dev server 导致图片 404；生产需同源或由 nginx 转发。
-- **权限前置提示**：`blog:upload:edit` 由后端 JwtInterceptor 校验，若当前管理员角色无此权限会 403。前端按 `userStore.hasPerm` 禁用按钮，需同步确认后端角色权限已配置。
-- **历史外链数据**：库里已有图片是 unsplash 等绝对地址，改为「只允许上传」后预览仍正常，但编辑时只能重新上传覆盖。
+- **原 `blog:` 分支必须原样保留**，这是回归清单中「内容管理不受影响」的硬性要求。
+- 动态路由仍通过 `router.addRoute('admin', r)` 挂到 `admin` 父路由下，新增路由的 `path` 用相对路径 `system/user`，拼接后为 `/admin/system/user`，与侧边栏链接一致。
+- 角色编辑提交 `menuIds` 时，空数组表示「不调整菜单绑定」（后端语义），不要用空数组去清空；需要清空时明确按后端约定处理。
+- 菜单管理树形数据用 `tree=true` 查询参数，平铺为默认；树形表格需设置 `row-key="menuId"`。
+- 接口函数沿用项目约定书写全路径 `/api/...`（与 `src/api/auth.ts`、`src/api/admin.ts` 一致）。
 
 ## 架构设计
 
-数据流向：`ImageUpload` 选择文件 → 前置校验 → `adminUploadImage()`（axios，带 token）→ 后端落盘并返回 `{url}` → 响应拦截器剥出 `data` → `emit('update:modelValue', url)` → 写入 `formData[field.key]` → 保存时随表单提交。
+数据流向：菜单接口返回菜单树 → 路由构建按权限前缀分流 → 系统页面调用 `src/api/system.ts` → axios 自动携带令牌与统一错误处理 → 页面渲染表格与弹窗表单。
 
-组件关系：`crud/index.vue` 在 `image` 分支渲染 `ImageUpload`，以 `v-model` 绑定当前字段；`ImageUpload` 内部依赖 `adminUploadImage`（`src/api/admin.ts`）与 `useUserStore` 的权限判断。
+```mermaid
+flowchart TD
+    A[GET /api/auth/menus 返回菜单树] --> B[buildDynamicRoutes 遍历叶子]
+    B --> C{perms 以 system: 开头?}
+    C -->|是| D{资源为 user/menu/role?}
+    D -->|是| E[views/admin/system/资源/index.vue]
+    D -->|否 dept/post/log| F[views/admin/system/Placeholder.vue]
+    C -->|否 blog:| G[views/admin/crud/index.vue 保持原逻辑]
+    E --> H[src/api/system.ts]
+    H --> I[/api/system/user|role|menu]
+```
 
 ## 目录结构
 
@@ -115,50 +134,113 @@ todos:
 d:/lzkgit/my_blog_/
 ├── src/
 │   ├── api/
-│   │   └── admin.ts                  # [MODIFY] 新增 adminUploadImage(file) 与 AdminUploadResult 类型；
-│   │                                 #         用 FormData 提交 file 字段，复用 service 自动带 token
-│   ├── views/admin/crud/
-│   │   ├── ImageUpload.vue           # [NEW] 受控图片上传控件：预览/上传/重新上传/移除、
-│   │                                 #       类型与大小前置校验、上传中 loading、权限禁用
-│   │   └── index.vue                 # [MODIFY] 新增 image 类型渲染分支接入 ImageUpload；
-│   │                                 #         清理兜底分支中已失效的 image 预览逻辑；
-│   │                                 #         补充控件样式
-│   └── vite.config.ts                # [MODIFY] proxy 增加 /uploads -> http://localhost:8080
+│   │   ├── system.ts                  # [NEW] 系统管理接口层：用户 / 角色 / 菜单 的标准增删改查，
+│   │   │                              #       并定义 SysUser / SysRole / SysMenu 三个驼峰类型；
+│   │   │                              #       用户用 userId、角色用 roleId、菜单用 menuId 作主键
+│   │   └── index.ts                   # [MODIFY] 追加 export * from './system'
+│   ├── router/
+│   │   └── index.ts                   # [MODIFY] 新增 isSystemMenu 判定；buildDynamicRoutes 内
+│   │                                  #         分流 system 资源到专用页、dept/post/log 到占位页，
+│   │                                  #         原 blog: 分支保持不变
+│   └── views/admin/system/
+│       ├── Placeholder.vue            # [NEW] 「开发中」占位页，部门 / 岗位 / 日志共用
+│       ├── user/index.vue             # [NEW] 用户管理：筛选、列表、新增 / 编辑弹窗、删除
+│       ├── menu/index.vue             # [NEW] 菜单管理：平铺 / 树形切换、上级选择、增删改
+│       └── role/index.vue             # [NEW] 角色管理：列表、菜单树勾选、增删改
 ```
 
 ## 关键代码结构
 
 ```ts
-// src/api/admin.ts —— 上传结果（后端 UploadResult 的 TS 映射）
-export interface AdminUploadResult {
-  url: string           // 可直接访问的相对路径，如 /uploads/2026/09/26/uuid.jpg
-  originalName: string
-  size: number
-  ext: string
+// src/api/system.ts —— 接口与类型（均为驼峰，密码不在返回体中）
+export interface SysUser {
+  userId: number
+  username: string
+  nickName?: string
+  status?: string
+  createTime?: string
+}
+export interface SysRole {
+  roleId: number
+  roleKey: string
+  roleName?: string
+  status?: string
+  createTime?: string
+  menuIds?: number[]
+}
+export interface SysMenu {
+  menuId: number
+  parentId: number
+  menuName: string
+  menuType?: 'M' | 'C' | 'F'
+  orderNum?: number
+  path?: string
+  component?: string
+  icon?: string
+  perms?: string
+  status?: string
+  createTime?: string
+  children?: SysMenu[]
 }
 
-// 单图上传；响应拦截器已剥掉 {code,msg,data}，此处直接拿到 AdminUploadResult
-export function adminUploadImage(file: File): Promise<AdminUploadResult>
+export function listUsers(params?: { username?: string; status?: string }): Promise<SysUser[]>
+export function getUser(userId: number): Promise<SysUser>
+export function createUser(body: Partial<SysUser> & { password?: string }): Promise<SysUser>
+export function updateUser(userId: number, body: Partial<SysUser> & { password?: string }): Promise<SysUser>
+export function deleteUser(userId: number): Promise<void>
+
+// 角色、菜单同构；菜单列表额外支持 tree 参数
+export function listMenus(params?: { menuName?: string; menuType?: string; status?: string; tree?: boolean }): Promise<SysMenu[]>
 ```
 
 ```ts
-// src/views/admin/crud/ImageUpload.vue —— 受控组件契约
-defineProps<{ modelValue: string }>()        // 当前图片 URL，空串表示未上传
-defineEmits<{ 'update:modelValue': [url: string] }>()
+// src/router/index.ts —— 路由分流判定
+function isSystemMenu(m: MenuItem): boolean {
+  return !!m.perms && m.perms.startsWith('system:')
+}
+// 命中 system: 时：seg = component 去掉 'blog/' 前缀（如 system/user）
+// 组件：() => import('@/views/admin/system/' + 末段 + '/index.vue')
+// dept / post / log 三个资源改为指向 '@/views/admin/system/Placeholder.vue'
 ```
+
 
 ## 设计风格
 
-沿用后台现有管理端风格：卡片化、轻量留白、与 `crud/index.vue` 一致的浅色/深色双主题（`#fff` / `#141414`，圆角 8-14px）。
+沿用后台现有管理端风格：卡片化容器、轻量留白、浅色/深色双主题，圆角 14px 卡片与 8px 控件圆角，悬停有轻微反馈，表单弹窗居中。整体简洁实用，与内容管理各页保持同一观感。
 
-## 控件结构（自上而下）
+## 页面规划
 
-1. **预览区**：已上传显示 120x90 圆角缩略图（`fit="cover"`），点击可放大查看原图；未上传显示虚线占位框（深色下边框 `#2a2a2a`），内含上传图标与「未上传」灰字提示。
-2. **操作区**：缩略图下方一行按钮——主按钮「上传图片 / 重新上传」（上传中显示 loading 并禁用），已有图片时追加一个朴素危险按钮「移除」。
+### 1. 用户管理
 
-## 交互
+- **页头**：左侧标题「用户管理」与资源说明文字，标明当前记录条数。
+- **筛选工具条**：用户名模糊输入框与状态下拉，右侧「查询」「重置」「新增」按钮。
+- **数据表格**：序号、用户名、昵称、状态标签、创建时间列，右侧固定操作列含「编辑」「删除」；状态用成功/危险色标签区分。
+- **新增/编辑弹窗**：用户名、昵称、状态、密码四项；编辑时密码留空并提示「留空则不修改密码」。
 
-- 点击主按钮唤起文件选择；选中即上传，成功后缩略图淡入替换并轻提示「上传成功」。
-- 文件类型或大小不合规：按钮上方即时红色文字提示，不发请求。
-- 无 `blog:upload:edit` 权限时主按钮置灰，鼠标悬停提示「无上传权限」。
-- 悬停缩略图轻微放大，与列表页图片列观感一致。
+### 2. 菜单管理
+
+- **页头**：标题与记录条数说明。
+- **工具条**：菜单名称输入、类型下拉、状态下拉，以及「平铺/树形」切换开关与「新增」按钮。
+- **菜单表格**：树形模式用树形表格展示层级（菜单名、类型、路径、组件、权限标识、排序、状态），平铺模式为普通表格；操作列含「编辑」「删除」。
+- **表单弹窗**：上级菜单选择、菜单名称、类型、路径、组件、图标、权限标识、排序、状态。
+
+### 3. 角色管理
+
+- **页头**：标题与记录条数说明。
+- **工具条**：角色标识、状态筛选与「新增」按钮。
+- **角色表格**：角色标识、角色名称、状态、创建时间与操作列。
+- **表单弹窗**：角色标识、角色名称、状态，下方为可折叠的菜单权限树，树节点可勾选，保存时提交所选菜单编号集合。
+
+### 4. 开发中占位页
+
+- **占位卡片**：居中虚线卡片，内含图标与「功能开发中」标题。
+- **说明文案**：说明该模块后端接口与数据表尚未提供，后续版本开放。
+- **返回按钮**：朴素按钮返回后台首页。
+
+## Agent Extensions
+
+### SubAgent
+
+- **code-explorer**
+  - Purpose: 在编写三个新页面前，确认 `el-tree` / `el-table` 树形用法 / `el-dialog` 等组件在项目中的注册方式，并提取 `views/admin/crud/index.vue` 中表格、工具条、弹窗表单的既有写法与样式约定。
+  - Expected outcome: 输出组件是否全局注册的结论与可复用的页面骨架清单，确保新页面写法与现有后台一致，避免组件未注册或样式风格漂移。

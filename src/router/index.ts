@@ -29,20 +29,45 @@ function resourceOf(menu: MenuItem): string {
   return parts.length >= 2 ? parts[1] : ''
 }
 
+// 系统管理菜单：权限前缀为 system:（如 system:user:edit）
+function isSystemMenu(m: MenuItem): boolean {
+  return !!m.perms && m.perms.startsWith('system:')
+}
+
+// 已实现页面的系统资源；其余（dept / post / log）后端暂无接口与数据表，走占位页
+const SYSTEM_PAGES: Record<string, () => Promise<any>> = {
+  user: () => import('@/views/admin/system/user/index.vue'),
+  menu: () => import('@/views/admin/system/menu/index.vue'),
+  role: () => import('@/views/admin/system/role/index.vue')
+}
+
 // 将菜单树转换为动态路由（仅叶子菜单 C 生成页面）
 function buildDynamicRoutes(menus: MenuItem[]): RouteRecordRaw[] {
   const routes: RouteRecordRaw[] = []
   const walk = (list: MenuItem[]) => {
     for (const m of list) {
       if (m.menuType === 'C' && m.status === '0') {
-        const resource = resourceOf(m)
-        if (resource) {
+        if (isSystemMenu(m)) {
+          // 系统管理页：component 形如 blog/system/user -> /admin/system/user
+          const seg = (m.component || m.path).replace(/^blog\//, '')
+          const res = seg.split('/').pop() || ''
           routes.push({
-            path: leafPath(m).replace(/^\/admin\//, ''),
-            name: 'Admin_' + resource,
-            component: () => import('@/views/admin/crud/index.vue'),
-            meta: { requiresAuth: true, title: m.menuName, resource, perms: m.perms, icon: m.icon }
+            path: seg,
+            name: 'Admin_System_' + res,
+            component: SYSTEM_PAGES[res] ?? (() => import('@/views/admin/system/Placeholder.vue')),
+            meta: { requiresAuth: true, title: m.menuName, resource: res, perms: m.perms, icon: m.icon }
           })
+        } else {
+          // 原有内容资源：通用 CRUD 页（保持既有实现不变）
+          const resource = resourceOf(m)
+          if (resource) {
+            routes.push({
+              path: leafPath(m).replace(/^\/admin\//, ''),
+              name: 'Admin_' + resource,
+              component: () => import('@/views/admin/crud/index.vue'),
+              meta: { requiresAuth: true, title: m.menuName, resource, perms: m.perms, icon: m.icon }
+            })
+          }
         }
       }
       if (m.children && m.children.length) walk(m.children)
