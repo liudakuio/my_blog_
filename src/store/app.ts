@@ -51,7 +51,20 @@ export const useAppStore = defineStore('app', () => {
     localStorage.setItem('theme', theme.value)
   }
 
-  // 根据当前时间自动初始化主题：18:30 ~ 06:00 为深色模式
+  // 设置指定主题并立即应用、持久化
+  function setTheme(next: 'light' | 'dark') {
+    theme.value = next
+    applyTheme()
+  }
+
+  // 后台管理端初始化主题：默认白天（浅色），不随时间自动切换深色；
+  // 用户仍可通过后台导航栏按钮手动切换（走 toggleTheme）。
+  function initAdminTheme() {
+    theme.value = 'light'
+    applyTheme()
+  }
+
+  // 根据当前时间自动初始化主题：18:30 ~ 06:00 为深色模式（访客端）
   function initTheme() {
     const now = new Date()
     const hour = now.getHours()
@@ -77,7 +90,9 @@ export const useAppStore = defineStore('app', () => {
     toggleLanguage,
     initLanguage,
     toggleTheme,
+    setTheme,
     initTheme,
+    initAdminTheme,
     setActiveTab
   }
 })
