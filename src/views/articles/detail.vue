@@ -33,7 +33,7 @@
       </div>
 
       <div class="detail-content">
-        <p v-for="(p, i) in paragraphs" :key="i" class="detail-paragraph">{{ p }}</p>
+        <MdPreview :modelValue="content" :theme="mdTheme" class="detail-markdown" />
       </div>
 
       <div v-if="images.length" class="detail-gallery">
@@ -63,6 +63,8 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { useArticleStore } from '@/store/articles'
 import type { Article } from '@/types'
+import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,22 +83,18 @@ const article = computed<Article | undefined>(() =>
 
 const isZh = computed(() => appStore.language === 'zh')
 
+// Markdown 预览主题跟随全局深色模式
+const mdTheme = computed(() => (appStore.isDark ? 'dark' : 'light'))
+
 const title = computed(() => {
   if (!article.value) return ''
   return isZh.value ? article.value.zh.title : article.value.en.title
 })
 
-// 正文按空行切分为段落
-const paragraphs = computed(() => {
-  const raw = article.value
-    ? isZh.value
-      ? article.value.zh.content
-      : article.value.en.content
-    : ''
-  return raw
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
+// 正文（Markdown 源码），交由 MdPreview 渲染
+const content = computed(() => {
+  if (!article.value) return ''
+  return isZh.value ? article.value.zh.content : article.value.en.content
 })
 
 const coverImage = computed(() => article.value?.common.coverImage || '')
@@ -300,15 +298,23 @@ function goBack() {
   gap: 1.75rem;
 }
 
-.detail-paragraph {
-  margin: 0;
+// Markdown 正文：颜色交给 md-editor-v3 主题，这里只调排版
+.detail-markdown {
   font-size: 1.0625rem;
-  line-height: 1.9;
-  color: #374151;
-  word-break: break-word;
 
-  .dark & {
-    color: #d1d5db;
+  :deep(p) {
+    margin: 0 0 1.25rem;
+    line-height: 1.9;
+    word-break: break-word;
+  }
+
+  :deep(img) {
+    max-width: 100%;
+    border-radius: 0.75rem;
+  }
+
+  :deep(pre) {
+    border-radius: 0.75rem;
   }
 }
 

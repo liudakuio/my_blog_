@@ -17,11 +17,11 @@ function normalize(vo: ArticleVo): Article {
     },
     zh: {
       title: vo.zh ? (vo.zh.title ?? '') : (vo.title ?? ''),
-      content: vo.zh?.content ?? ''
+      content: vo.content ?? vo.zh?.content ?? ''
     },
     en: {
       title: vo.en ? (vo.en.title ?? '') : (vo.title ?? ''),
-      content: vo.en?.content ?? ''
+      content: vo.content ?? vo.en?.content ?? ''
     }
   }
 }

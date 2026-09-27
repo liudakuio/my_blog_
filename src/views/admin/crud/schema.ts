@@ -37,9 +37,9 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
     title: '站点文案',
     fields: [
       autoId(),
-      f('config_key', '配置键', 'text', { required: true }),
-      f('value_zh', '中文值', 'textarea'),
-      f('value_en', '英文值', 'textarea'),
+      f('configKey', '配置键', 'text', { required: true }),
+      f('valueZh', '中文值', 'textarea'),
+      f('valueEn', '英文值', 'textarea'),
       f('remark', '备注', 'text', { table: false })
     ]
   },
@@ -93,9 +93,9 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
     title: '作品分类',
     fields: [
       autoId(),
-      f('category_value', '分类值', 'text', { required: true }),
-      f('label_zh', '中文名', 'text'),
-      f('label_en', '英文名', 'text'),
+      f('categoryValue', '分类值', 'text', { required: true }),
+      f('labelZh', '中文名', 'text'),
+      f('labelEn', '英文名', 'text'),
       f('sort', '排序', 'number', { width: 90 }),
       f('status', '状态', 'select', { options: STATUS, width: 90 })
     ]
@@ -109,11 +109,11 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('category', '分类', 'text', { width: 120 }),
       f('cover', '封面', 'image', { table: true, form: true, width: 90 }),
       f('icon', '图标', 'text', { table: false }),
-      f('video_url', '视频', 'link', { table: false }),
-      f('bilibili_id', 'B站ID', 'text', { table: false }),
-      f('figma_url', 'Figma', 'link', { table: false }),
-      f('website_url', '官网', 'link', { table: false }),
-      f('github_url', 'GitHub', 'link', { table: false }),
+      f('videoUrl', '视频', 'link', { table: false }),
+      f('bilibiliId', 'B站ID', 'text', { table: false }),
+      f('figmaUrl', 'Figma', 'link', { table: false }),
+      f('websiteUrl', '官网', 'link', { table: false }),
+      f('githubUrl', 'GitHub', 'link', { table: false }),
       f('sort', '排序', 'number', { width: 90 }),
       f('status', '状态', 'select', { options: STATUS, width: 90 }),
       f('remark', '备注', 'textarea', { table: false })
@@ -176,11 +176,11 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
     title: '文章分类',
     fields: [
       autoId(),
-      f('category_value', '分类值', 'text', { required: true }),
-      f('label_zh', '中文名', 'text'),
-      f('label_en', '英文名', 'text'),
-      f('short_label_zh', '短标签(中)', 'text', { table: false }),
-      f('short_label_en', '短标签(英)', 'text', { table: false }),
+      f('categoryValue', '分类值', 'text', { required: true }),
+      f('labelZh', '中文名', 'text'),
+      f('labelEn', '英文名', 'text'),
+      f('shortLabelZh', '短标签(中)', 'text', { table: false }),
+      f('shortLabelEn', '短标签(英)', 'text', { table: false }),
       f('sort', '排序', 'number', { width: 90 }),
       f('status', '状态', 'select', { options: STATUS, width: 90 })
     ]
@@ -193,8 +193,8 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       { ...strId(), section: '基础信息' },
       f('category', '分类', 'text', { width: 120, section: '基础信息' }),
       f('link', '链接', 'link', { table: false, section: '基础信息' }),
-      f('cover_image', '封面', 'image', { width: 90, section: '基础信息' }),
-      f('publish_date', '发布日期', 'datetime', { width: 170, section: '基础信息' }),
+      f('coverImage', '封面', 'image', { width: 90, section: '基础信息' }),
+      f('publishDate', '发布日期', 'date', { width: 170, section: '基础信息' }),
       f('sort', '排序', 'number', { width: 90, section: '基础信息' }),
       f('status', '状态', 'select', { options: STATUS, width: 90, section: '基础信息' }),
       f('remark', '备注', 'textarea', { table: false, section: '基础信息' }),
@@ -232,9 +232,9 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
     title: '教育文案',
     fields: [
       autoId(),
-      f('config_key', '配置键', 'text', { required: true }),
-      f('value_zh', '中文值', 'textarea'),
-      f('value_en', '英文值', 'textarea'),
+      f('configKey', '配置键', 'text', { required: true }),
+      f('valueZh', '中文值', 'textarea'),
+      f('valueEn', '英文值', 'textarea'),
       f('remark', '备注', 'text', { table: false })
     ]
   },

@@ -134,6 +134,8 @@ export interface ArticleVo {
   link: string
   coverImage: string
   date: string
+  /** 正文（Markdown，取自主表不区分语言） */
+  content?: string
   /** 单语模式 */
   title?: string
   /** 双语模式 */

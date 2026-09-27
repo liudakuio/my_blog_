@@ -125,6 +125,14 @@
                   :value="opt.value"
                 />
               </el-select>
+              <!-- 日期（YYYY-MM-DD，如文章发布日期） -->
+              <el-date-picker
+                v-else-if="field.type === 'date'"
+                v-model="formData[field.key]"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="w-full"
+              />
               <!-- 日期时间 -->
               <el-date-picker
                 v-else-if="field.type === 'datetime'"
@@ -172,6 +180,14 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
 import { adminList, adminGet, adminCreate, adminUpdate, adminDelete } from '@/api/admin'
+import {
+  isDedicatedResource,
+  adminResourceList,
+  adminResourceGet,
+  adminResourceCreate,
+  adminResourceUpdate,
+  adminResourceDelete
+} from '@/api/adminResource'
 import { SCHEMA_MAP } from './schema'
 import type { FieldSchema } from './types'
 import { MdEditor } from 'md-editor-v3'
@@ -247,7 +263,11 @@ async function load() {
   if (!resource.value) return
   loading.value = true
   try {
-    const data = await adminList(resource.value, buildParams())
+    // 7 个专用资源走专用接口（驼峰 VO），其余走通用 CRUD（下划线）
+    const res = resource.value
+    const data: any = isDedicatedResource(res)
+      ? await adminResourceList(res, buildParams())
+      : await adminList(res, buildParams())
     list.value = Array.isArray(data) ? data : []
   } catch (e) {
     list.value = []
@@ -288,7 +308,10 @@ async function openEdit(row: any) {
   editingId.value = pk
   dialogTitle.value = `编辑 - ${schema.value?.title}`
   try {
-    const detail = await adminGet(resource.value, pk)
+    const res = resource.value
+    const detail: any = isDedicatedResource(res)
+      ? await adminResourceGet(res, pk)
+      : await adminGet(res, pk)
     formFields.value.forEach((f) => (formData[f.key] = detail?.[f.key] ?? defaultFor(f)))
   } catch (e) {
     // 详情失败则用行数据兜底
@@ -304,11 +327,14 @@ async function handleSave() {
   try {
     const payload: Record<string, any> = {}
     formFields.value.forEach((f) => (payload[f.key] = formData[f.key]))
+    const res = resource.value
     if (editingId.value !== null) {
-      await adminUpdate(resource.value, editingId.value, payload)
+      if (isDedicatedResource(res)) await adminResourceUpdate(res, editingId.value, payload)
+      else await adminUpdate(res, editingId.value, payload)
       ElMessage.success('已更新')
     } else {
-      await adminCreate(resource.value, payload)
+      if (isDedicatedResource(res)) await adminResourceCreate(res, payload)
+      else await adminCreate(res, payload)
       ElMessage.success('已创建')
     }
     dialogVisible.value = false
@@ -327,7 +353,9 @@ async function handleDelete(row: any) {
     return
   }
   try {
-    await adminDelete(resource.value, row.id)
+    const res = resource.value
+    if (isDedicatedResource(res)) await adminResourceDelete(res, row.id)
+    else await adminDelete(res, row.id)
     ElMessage.success('已删除')
     load()
   } catch (e) {

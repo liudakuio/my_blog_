@@ -6,6 +6,7 @@ export type FieldType =
   | 'select'
   | 'image'
   | 'link'
+  | 'date'
   | 'datetime'
   | 'markdown'
 
