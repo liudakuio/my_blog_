@@ -64,15 +64,11 @@ interface Stat {
 const stats = ref<Stat[]>([
   { resource: 'article', label: '文章', icon: Document, path: '/admin/article/list', value: 0, loading: true },
   { resource: 'project', label: '作品', icon: Files, path: '/admin/project/list', value: 0, loading: true },
-  { resource: 'music', label: '音乐', icon: Headset, path: '/admin/music/list', value: 0, loading: true },
   { resource: 'article_category', label: '文章分类', icon: Collection, path: '/admin/article/category', value: 0, loading: true },
-  { resource: 'project_category', label: '作品分类', icon: Collection, path: '/admin/project/category', value: 0, loading: true },
-  { resource: 'social', label: '社交平台', icon: Share, path: '/admin/social', value: 0, loading: true }
+  { resource: 'project_category', label: '作品分类', icon: Collection, path: '/admin/project/category', value: 0, loading: true }
 ])
 
 const quickLinks = [
-  { label: '站点文案', icon: Notebook, path: '/admin/siteText' },
-  { label: '首页 Banner', icon: Document, path: '/admin/hero' },
   { label: '文章列表', icon: Document, path: '/admin/article/list' },
   { label: '作品列表', icon: Files, path: '/admin/project/list' }
 ]

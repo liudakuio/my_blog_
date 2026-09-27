@@ -69,24 +69,6 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('sort', '排序', 'number', { width: 90 })
     ]
   },
-  // 4 社交平台
-  {
-    resource: 'social',
-    title: '社交平台',
-    fields: [
-      autoId(),
-      f('social_key', '平台键', 'text', { required: true }),
-      f('name_zh', '中文名', 'text'),
-      f('name_en', '英文名', 'text'),
-      f('account', '账号', 'text'),
-      f('url', '链接', 'link', { table: false }),
-      f('icon', '图标', 'text', { width: 110 }),
-      f('clickable', '可点击', 'select', { options: YESNO, width: 100 }),
-      f('tooltip_text', '提示文案', 'text', { table: false }),
-      f('tooltip_domain', '提示域名', 'text', { table: false }),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
   // 5 作品分类
   {
     resource: 'project_category',
@@ -210,20 +192,6 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('article_id', '文章ID', 'text', { required: true, width: 110 }),
       f('lang', '语言', 'select', { options: LANG, width: 90 }),
       f('title', '标题', 'text')
-    ]
-  },
-  // 14 音乐
-  {
-    resource: 'music',
-    title: '音乐列表',
-    fields: [
-      strId(),
-      f('title', '曲名', 'text'),
-      f('artist', '艺术家', 'text'),
-      f('cover', '封面', 'image', { width: 90 }),
-      f('audio', '音频', 'link', { table: false }),
-      f('sort', '排序', 'number', { width: 90 }),
-      f('status', '状态', 'select', { options: STATUS, width: 90 })
     ]
   },
   // 15 教育文案
