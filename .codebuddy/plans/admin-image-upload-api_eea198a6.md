@@ -63,184 +63,117 @@ todos:
 
 ## 产品概述
 
-后台管理端新增「系统管理」模块，用于维护平台的用户、菜单与角色三类系统数据；部门、岗位、日志三个入口保留在侧边栏，但点击后进入统一的「开发中」提示页。
+访客端音乐播放器（`MusicPlayer.vue`）此前在「c84781e 增加前后端对接」中被改为从后端 `/api/music/playlist` 拉取歌单，同时删除了本地歌单数据文件。用户认为改动后效果不如从前，要求把播放器恢复到该提交之前的版本：使用本地内置歌单，不再请求后端播放列表接口。
 
 ## 核心功能
 
-- **系统管理菜单**：侧边栏出现「系统管理」目录及用户管理、菜单管理、角色管理、部门管理、岗位管理、日志管理六个子菜单，点击后进入各自页面（不再落到通用内容管理页）。
-- **用户管理**：按用户名、状态筛选查询；新增用户（用户名与密码必填）；编辑用户信息（密码留空表示不修改）；删除用户（内置管理员不可删，给出明确提示）。列表中不展示密码。
-- **菜单管理**：平铺列表与树形结构切换查看；新增菜单（名称必填，可指定上级菜单、类型、路径、组件、图标、权限标识、排序）；编辑；删除（存在子菜单时提示需先删除子菜单）。
-- **角色管理**：列表查询；新增与编辑时可勾选该角色可访问的菜单；删除角色（内置管理员角色不可删）。
-- **开发中占位**：部门、岗位、日志三个入口可见可点，进入后展示统一的功能开发中提示。
-- **权限控制**：新增、编辑、删除等写操作按 `system:{资源}:edit` 权限显示或禁用。
+1. **本地歌单恢复**：重建 `src/data/music.ts`，内置 4 首歌曲（标题、艺术家、封面、音频路径），作为播放器唯一数据源。
+2. **播放器数据源回退**：`MusicPlayer.vue` 改为使用本地 `MUSIC_PLAYLIST`，移除对 `siteStore.playlist` 的依赖。
+3. **底部歌单卡片回退**：恢复为固定的网易云歌单外链与内置中英文文案（不再由 `/api/site/config` 的 `musicPlaylistLink` 驱动）。
+4. **停止后端播放列表请求**：不再调用 `/api/music/playlist`，清理随之失效的调用链。
 
-## 视觉效果
+## 边界
 
-沿用后台现有卡片化风格与深浅色双主题：白色/深色卡片容器、圆角工具栏、表格斑马纹、按钮与表单沿用后台既有控件观感，保证与内容管理各页视觉一致。
+- 只回退访客端播放器；后台「音乐列表」管理页、后端 `/api/admin/music`、`/api/music/playlist` 接口本身均**不动**。
+- `/api/site/config` 请求**保留**（站点导航、页脚、文案仍依赖它），仅播放器不再用其中的 `musicPlaylistLink` 渲染卡片。
+- 不做后台音乐改回通用 CRUD、不隐藏后台音乐菜单。
 
 
 ## 技术栈
 
-沿用现有项目栈，不引入新框架：
-
-- Vue 3 + TypeScript + `<script setup>`
-- Element Plus（表格、表单、弹窗、树形控件、消息提示）
-- Pinia（用户态与权限）+ Vue Router 4（动态路由）
-- Vite；请求复用 `src/utils/request.ts` 的 axios 实例
+沿用现有项目栈：Vue 3 + TypeScript + Element Plus + Pinia + Vite。数据由本地 TS 常量提供，无新增依赖。
 
 ## 实现思路
 
-核心是「按权限前缀分流路由 + 新增三个专用页面 + 新增系统接口层」。
-
-当前 `buildDynamicRoutes` 把所有叶子菜单都指向通用 CRUD 页，并用 `perms.split(':')[1]` 取资源名，`system:user:edit` 会被解析成资源 `user`，从而请求 `/api/admin/user` 触发后端 `400 未知资源`。因此在路由构建处增加 `system:` 前缀判断：命中则渲染 `views/admin/system/{资源}/index.vue`，否则完整保留原有 `blog:` 分支逻辑，确保内容管理功能零影响。
-
-三个页面不复用通用 CRUD，因为它们的主键名、字段语义与交互（角色需勾选菜单树、菜单需树形切换、用户密码为只写字段）都与通用 CRUD 不同，独立实现更清晰。
+以「恢复本地歌单数据文件 + 逐处回退播放器改动 + 清理失效调用链」三段式还原到 c84781e 之前的行为。核心是**不直接 `git checkout` 旧文件**：c84781e 同时重命名了 `public/music` 下的音频与封面（如 `Vallès - Pirene's Fountain.mp3` → `pirene.mp3`），旧数据文件中的路径已全部失效，必须按当前资源文件名重写，否则 4 首歌全部 404。
 
 **关键技术决策**：
 
-1. **仅改造 `buildDynamicRoutes` 一处，不动侧边栏与菜单配置**：`config/menu.ts` 的 `menuRoutePath` 对 `blog/system/user` 已产出 `/admin/system/user`，与文档建议的路由路径完全一致，侧边栏会自动渲染出「系统管理」及子菜单，无需改动。
-2. **部门/岗位/日志路由到共享占位页**：三者无后端接口也无页面文件，若不特殊处理，动态 `import()` 会因文件不存在而解析失败，因此统一指向 `Placeholder.vue`。
-3. **密码只写不读**：新增必填；编辑时留空即不提交改密码；列表与详情不回显（后端本身也不返回）。
-4. **业务校验交给后端**：用户名重复、roleKey 唯一、内置对象不可删、有子菜单不可删均由后端返回 400 与中文提示，前端依赖响应拦截器统一弹提示，不重复实现校验。
-5. **权限复用 `hasPerm`**：与通用 CRUD 页的 `editable` 一致，改用 `hasPerm('system:' + resource + ':edit')` 控制写操作按钮。
+1. **重写而非检出 `src/data/music.ts`**：旧文件引用的是重命名前的长文件名（含空格、特殊字符），当前 `public/music` 只有 `island / lofi / pirene / updater` 四组文件。按新文件名重建可保证立即可播放，同时短文件名也更利于 URL 编码安全。
+2. **播放器回退粒度控制在 c84781e 的改动范围内**：只回退该提交引入的 7 处改动（可选链、`playlistLink` 卡片、import、`currentSong`/`getSongUrl`/`handleNext`/`handlePrev`），不触碰该提交之后其他提交对播放器的任何修改。
+3. **回退后列表恒非空**：本地歌单是编译期常量，因此 `currentSong` 不再需要 `?? null` 兜底，`getSongUrl` 不需要 null 守卫，`handleNext`/`handlePrev` 不需要空列表判断——这些防御代码随数据源回退一并移除，避免留下无意义分支。
+4. **最小化爆破半径**：仅删除确无其他引用的 `getPlaylist` 调用链；`musicPlaylistLink`（来自 `/api/site/config`）保留在 store 中，因为它是站点配置的自然映射，删除收益低且 config 仍被其他模块使用。
 
 ## 实现要点（防回归）
 
-- **原 `blog:` 分支必须原样保留**，这是回归清单中「内容管理不受影响」的硬性要求。
-- 动态路由仍通过 `router.addRoute('admin', r)` 挂到 `admin` 父路由下，新增路由的 `path` 用相对路径 `system/user`，拼接后为 `/admin/system/user`，与侧边栏链接一致。
-- 角色编辑提交 `menuIds` 时，空数组表示「不调整菜单绑定」（后端语义），不要用空数组去清空；需要清空时明确按后端约定处理。
-- 菜单管理树形数据用 `tree=true` 查询参数，平铺为默认；树形表格需设置 `row-key="menuId"`。
-- 接口函数沿用项目约定书写全路径 `/api/...`（与 `src/api/auth.ts`、`src/api/admin.ts` 一致）。
+- **文件名映射必须正确**：local-01 → `pirene`，local-02 → `lofi`，local-03 → `island`，local-04 → `updater`；音频在 `/music/audio/`，封面在 `/music/covers/`，均以 `/` 开头（播放器 `getSongUrl` 会规范化为 `/music/...`）。
+- **移除失效 import**：回退后 `MusicPlayer.vue` 不再需要 `useSiteStore` 与 `pickText`，必须一并删除，避免未使用变量告警。
+- **旧版卡片文案就地判断语言**：用 `appStore.language === 'zh' ? ... : ...`，不依赖 `pickText`。
+- **确认无残留引用**：`siteStore.playlist` 当前仅被 `MusicPlayer.vue` 使用；`getPlaylist()` 仅被 `src/store/site.ts` 使用。删除前需再次核实（如 `SongVo` 类型是否被 `api/types.ts` 之外引用）。
+- **public 资源不动**：回退不涉及任何 public 文件改名或删除。
 
 ## 架构设计
 
-数据流向：菜单接口返回菜单树 → 路由构建按权限前缀分流 → 系统页面调用 `src/api/system.ts` → axios 自动携带令牌与统一错误处理 → 页面渲染表格与弹窗表单。
+回退后数据流向为纯前端：`src/data/music.ts`（编译期常量）→ `MusicPlayer.vue` 的 `currentSong` computed → `getSongUrl()` 解析为 `/music/audio/*.mp3` → `<audio>` 元素直接加载本地静态资源。播放器与 Pinia 的 `siteStore` 解耦，不再参与任何播放列表网络请求。
 
 ```mermaid
-flowchart TD
-    A[GET /api/auth/menus 返回菜单树] --> B[buildDynamicRoutes 遍历叶子]
-    B --> C{perms 以 system: 开头?}
-    C -->|是| D{资源为 user/menu/role?}
-    D -->|是| E[views/admin/system/资源/index.vue]
-    D -->|否 dept/post/log| F[views/admin/system/Placeholder.vue]
-    C -->|否 blog:| G[views/admin/crud/index.vue 保持原逻辑]
-    E --> H[src/api/system.ts]
-    H --> I[/api/system/user|role|menu]
+flowchart LR
+    A[src/data/music.ts<br/>MUSIC_PLAYLIST 本地常量] --> B[MusicPlayer.vue<br/>currentSong computed]
+    B --> C[getSongUrl 解析路径]
+    C --> D[public/music/audio/*.mp3]
+    B --> E[模板渲染 标题/艺术家/封面]
+    F[底部歌单卡片<br/>硬编码外链与中英文案] --> G[网易云歌单页]
 ```
 
 ## 目录结构
 
 ```
-d:/lzkgit/my_blog_/
-├── src/
-│   ├── api/
-│   │   ├── system.ts                  # [NEW] 系统管理接口层：用户 / 角色 / 菜单 的标准增删改查，
-│   │   │                              #       并定义 SysUser / SysRole / SysMenu 三个驼峰类型；
-│   │   │                              #       用户用 userId、角色用 roleId、菜单用 menuId 作主键
-│   │   └── index.ts                   # [MODIFY] 追加 export * from './system'
-│   ├── router/
-│   │   └── index.ts                   # [MODIFY] 新增 isSystemMenu 判定；buildDynamicRoutes 内
-│   │                                  #         分流 system 资源到专用页、dept/post/log 到占位页，
-│   │                                  #         原 blog: 分支保持不变
-│   └── views/admin/system/
-│       ├── Placeholder.vue            # [NEW] 「开发中」占位页，部门 / 岗位 / 日志共用
-│       ├── user/index.vue             # [NEW] 用户管理：筛选、列表、新增 / 编辑弹窗、删除
-│       ├── menu/index.vue             # [NEW] 菜单管理：平铺 / 树形切换、上级选择、增删改
-│       └── role/index.vue             # [NEW] 角色管理：列表、菜单树勾选、增删改
+d:/lzkgit/my_blog_/src/
+├── data/
+│   └── music.ts              # [NEW] 恢复本地歌单数据。导出 Song 接口与 MUSIC_PLAYLIST（4 首）。
+│                             #       路径必须使用当前资源名：/music/audio/{pirene,lofi,island,updater}.mp3
+│                             #       与 /music/covers/{pirene,lofi,island,updater}.jpg
+├── components/
+│   └── MusicPlayer.vue       # [MODIFY] 回退 7 处改动：import 改回 MUSIC_PLAYLIST；
+│                             #          currentSong 用 MUSIC_PLAYLIST[idx]；模板去掉 ?. 可选链；
+│                             #          底部卡片恢复硬编码网易云链接与中英文案；
+│                             #          getSongUrl 签名回到 typeof currentSong.value 并去掉 null 守卫；
+│                             #          handleNext/handlePrev 回到 MUSIC_PLAYLIST.length 并去掉空列表判断；
+│                             #          移除 useSiteStore / pickText import 与 playlist、playlistLink 两个 computed
+├── App.vue                   # [MODIFY] 移除 siteStore.loadPlaylist() 调用（停止 /api/music/playlist 请求）
+├── store/
+│   └── site.ts               # [MODIFY] 移除 playlist ref、loadPlaylist() 及 getPlaylist 导入；
+│                             #          musicPlaylistLink 保留（站点配置映射，config 仍被导航/页脚使用）
+└── api/
+    ├── music.ts              # [DELETE] getPlaylist() 已无调用方
+    └── index.ts              # [MODIFY] 移除 './music' 导出（若 SongVo 无其他引用则一并清理）
 ```
 
 ## 关键代码结构
 
 ```ts
-// src/api/system.ts —— 接口与类型（均为驼峰，密码不在返回体中）
-export interface SysUser {
-  userId: number
-  username: string
-  nickName?: string
-  status?: string
-  createTime?: string
-}
-export interface SysRole {
-  roleId: number
-  roleKey: string
-  roleName?: string
-  status?: string
-  createTime?: string
-  menuIds?: number[]
-}
-export interface SysMenu {
-  menuId: number
-  parentId: number
-  menuName: string
-  menuType?: 'M' | 'C' | 'F'
-  orderNum?: number
-  path?: string
-  component?: string
-  icon?: string
-  perms?: string
-  status?: string
-  createTime?: string
-  children?: SysMenu[]
+// src/data/music.ts —— 恢复的本地歌单（路径对齐当前 public 资源）
+export interface Song {
+  id: string
+  title: string
+  artist: string
+  cover: string
+  audio: string
 }
 
-export function listUsers(params?: { username?: string; status?: string }): Promise<SysUser[]>
-export function getUser(userId: number): Promise<SysUser>
-export function createUser(body: Partial<SysUser> & { password?: string }): Promise<SysUser>
-export function updateUser(userId: number, body: Partial<SysUser> & { password?: string }): Promise<SysUser>
-export function deleteUser(userId: number): Promise<void>
-
-// 角色、菜单同构；菜单列表额外支持 tree 参数
-export function listMenus(params?: { menuName?: string; menuType?: string; status?: string; tree?: boolean }): Promise<SysMenu[]>
+export const MUSIC_PLAYLIST: Song[] = [
+  // id: 'local-01' -> pirene    | "Pirene's Fountain" / Vallès
+  // id: 'local-02' -> lofi      | 'Sleepless nights - lofi hiphop mix pt.2' / Mixed Artists
+  // id: 'local-03' -> island    | 'Island' / Nujabes/Uyama Hiroto/Haruka Nakamura
+  // id: 'local-04' -> updater   | 'the updater' / TSUTCHIE
+]
 ```
 
 ```ts
-// src/router/index.ts —— 路由分流判定
-function isSystemMenu(m: MenuItem): boolean {
-  return !!m.perms && m.perms.startsWith('system:')
-}
-// 命中 system: 时：seg = component 去掉 'blog/' 前缀（如 system/user）
-// 组件：() => import('@/views/admin/system/' + 末段 + '/index.vue')
-// dept / post / log 三个资源改为指向 '@/views/admin/system/Placeholder.vue'
+// MusicPlayer.vue —— 回退后的关键契约
+const currentSong = computed(() => MUSIC_PLAYLIST[currentSongIndex.value])
+function getSongUrl(song: typeof currentSong.value, isCover = false): string
 ```
 
-
-## 设计风格
-
-沿用后台现有管理端风格：卡片化容器、轻量留白、浅色/深色双主题，圆角 14px 卡片与 8px 控件圆角，悬停有轻微反馈，表单弹窗居中。整体简洁实用，与内容管理各页保持同一观感。
-
-## 页面规划
-
-### 1. 用户管理
-
-- **页头**：左侧标题「用户管理」与资源说明文字，标明当前记录条数。
-- **筛选工具条**：用户名模糊输入框与状态下拉，右侧「查询」「重置」「新增」按钮。
-- **数据表格**：序号、用户名、昵称、状态标签、创建时间列，右侧固定操作列含「编辑」「删除」；状态用成功/危险色标签区分。
-- **新增/编辑弹窗**：用户名、昵称、状态、密码四项；编辑时密码留空并提示「留空则不修改密码」。
-
-### 2. 菜单管理
-
-- **页头**：标题与记录条数说明。
-- **工具条**：菜单名称输入、类型下拉、状态下拉，以及「平铺/树形」切换开关与「新增」按钮。
-- **菜单表格**：树形模式用树形表格展示层级（菜单名、类型、路径、组件、权限标识、排序、状态），平铺模式为普通表格；操作列含「编辑」「删除」。
-- **表单弹窗**：上级菜单选择、菜单名称、类型、路径、组件、图标、权限标识、排序、状态。
-
-### 3. 角色管理
-
-- **页头**：标题与记录条数说明。
-- **工具条**：角色标识、状态筛选与「新增」按钮。
-- **角色表格**：角色标识、角色名称、状态、创建时间与操作列。
-- **表单弹窗**：角色标识、角色名称、状态，下方为可折叠的菜单权限树，树节点可勾选，保存时提交所选菜单编号集合。
-
-### 4. 开发中占位页
-
-- **占位卡片**：居中虚线卡片，内含图标与「功能开发中」标题。
-- **说明文案**：说明该模块后端接口与数据表尚未提供，后续版本开放。
-- **返回按钮**：朴素按钮返回后台首页。
 
 ## Agent Extensions
 
 ### SubAgent
-
 - **code-explorer**
-  - Purpose: 在编写三个新页面前，确认 `el-tree` / `el-table` 树形用法 / `el-dialog` 等组件在项目中的注册方式，并提取 `views/admin/crud/index.vue` 中表格、工具条、弹窗表单的既有写法与样式约定。
-  - Expected outcome: 输出组件是否全局注册的结论与可复用的页面骨架清单，确保新页面写法与现有后台一致，避免组件未注册或样式风格漂移。
+  - Purpose: 在清理阶段核实 `MUSIC_PLAYLIST`、`getPlaylist`、`siteStore.playlist`、`SongVo`、`musicPlaylistLink` 的全部引用点，确认删除 `src/api/music.ts` 与 store 中 `loadPlaylist` 不会造成悬空引用
+  - Expected outcome: 输出完整引用清单，确认除 MusicPlayer.vue 与 store/site.ts 外无其他调用方，方可安全删除
+
+### Skill
+- **lsp-code-analysis**
+  - Purpose: 用语义级「查找引用 / 定义跳转」复核 `getPlaylist` 与 `SongVo` 的引用，避免仅靠文本搜索漏掉别名导入或重导出场景
+  - Expected outcome: 确认待删除符号零引用或仅剩自身定义，删除后 `vue-tsc` 无报错

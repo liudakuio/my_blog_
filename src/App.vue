@@ -23,9 +23,8 @@ onMounted(() => {
   } else {
     appStore.initTheme()
   }
-  // 全站共享数据：站点配置（导航/页脚/文案/联系方式）+ 音乐播放列表
+  // 全站共享数据：站点配置（导航/页脚/文案/联系方式）
   siteStore.loadConfig()
-  siteStore.loadPlaylist()
 })
 
 // 由访客端进入后台时切换为默认浅色；后台内部跳转不再覆盖用户的手动选择
