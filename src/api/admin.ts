@@ -27,3 +27,23 @@ export function adminUpdate(resource: string, id: string | number, body: Record<
 export function adminDelete(resource: string, id: string | number) {
   return service.delete('/api/admin/' + resource + '/' + id)
 }
+
+/** 后台图片上传结果（对应后端 FileUploadController.UploadResult） */
+export interface AdminUploadResult {
+  /** 可直接访问的相对 URL，如 /uploads/2026/09/26/uuid.jpg */
+  url: string
+  originalName: string
+  size: number
+  ext: string
+}
+
+/**
+ * POST /api/admin/upload/image —— 单图上传，需 blog:upload:edit 权限。
+ * 用 FormData 提交 file 字段；不手动设置 Content-Type，由 axios 自动带 boundary。
+ * 响应拦截器已剥出 data，此处直接拿到 AdminUploadResult。
+ */
+export function adminUploadImage(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return service.post<AdminUploadResult, AdminUploadResult>('/api/admin/upload/image', form)
+}

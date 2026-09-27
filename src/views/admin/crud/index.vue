@@ -151,13 +151,14 @@
                   class="md-editor"
                 />
               </template>
-              <!-- 图片 / 链接：URL 输入 + 预览 -->
+              <!-- 图片：上传控件（调用后端上传接口，值统一为 /uploads 相对路径） -->
+              <ImageUpload v-else-if="field.type === 'image'" v-model="formData[field.key]" />
+              <!-- 链接 / 文本：URL 或文本输入 -->
               <template v-else>
-                <el-input v-model="formData[field.key]" :placeholder="field.label + ' URL'">
-                  <template v-if="field.type === 'image' && formData[field.key]" #append>
-                    <el-image :src="formData[field.key]" fit="cover" class="mini-thumb" />
-                  </template>
-                </el-input>
+                <el-input
+                  v-model="formData[field.key]"
+                  :placeholder="field.type === 'link' ? field.label + ' URL' : field.label"
+                />
               </template>
             </el-form-item>
           </template>
@@ -189,6 +190,7 @@ import {
   adminResourceDelete
 } from '@/api/adminResource'
 import { SCHEMA_MAP } from './schema'
+import ImageUpload from './ImageUpload.vue'
 import type { FieldSchema } from './types'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
@@ -453,12 +455,6 @@ watch(
   width: 48px;
   height: 36px;
   border-radius: 6px;
-}
-
-.mini-thumb {
-  width: 28px;
-  height: 28px;
-  border-radius: 5px;
 }
 
 .cell-link {

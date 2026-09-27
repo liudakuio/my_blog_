@@ -21,6 +21,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      // 上传后的图片由后端以 /uploads/** 直读磁盘返回，需一并代理，
+      // 否则开发态预览与列表缩略图会打到 Vite dev server 导致 404
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   },
