@@ -5,14 +5,13 @@
 import service from '@/utils/request'
 import type { AdminVoMap } from './adminTypes'
 
-/** 走专用接口的资源（顺序与后端文档一致） */
+/** 走专用接口的资源（顺序与后端文档一致；music / social 的专用接口已由后端移除，走通用 CRUD） */
 export const DEDICATED_RESOURCES = [
   'site_text',
   'project',
   'project_category',
   'article',
   'article_category',
-  'music',
   'education_text'
 ] as const
 

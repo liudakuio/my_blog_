@@ -9,85 +9,15 @@ export type I18nText = string | Record<string, string> | null | undefined
 /** 双语模式下的字段集合 */
 export type I18nMap = Record<string, any> | undefined
 
-export interface TooltipVo {
-  text?: string
-  domain?: string
-}
-
 export interface NavItemVo {
   id: string
   label: I18nText
   sort?: number
 }
 
-export interface FooterVo {
-  copyright: I18nText
-  designStatement: I18nText
-}
-
-export interface ContactCardVo {
-  baseLabel: string
-  locationValue: I18nText
-  contactLabel: I18nText
-  tooltip: I18nText
-}
-
-export interface HeroItemVo {
-  text: I18nText
-  annotation: I18nText
-  category: string | null
-  sort?: number
-}
-
-export interface HomeVo {
-  heroItems: HeroItemVo[]
-  intro: I18nText
-  selectedWorks: I18nText
-  years: string
-  contactCard: ContactCardVo
-}
-
-export interface PageTextVo {
-  title: I18nText
-  description: I18nText
-}
-
-export interface PagesVo {
-  portfolio: PageTextVo
-  articles: PageTextVo
-}
-
-export interface SocialItemVo {
-  key: string
-  name: I18nText
-  account: string
-  url: string
-  icon: string
-  clickable: boolean
-  tooltip: TooltipVo | null
-}
-
-export interface ContactVo {
-  hello: I18nText
-  intro: I18nText
-  email: string
-  emailLabel: I18nText
-  socials: SocialItemVo[]
-}
-
-export interface MusicPlaylistLinkVo {
-  title: I18nText
-  subtitle: I18nText
-  url: string
-}
-
+/** 站点配置（后端目前仅返回导航） */
 export interface SiteConfigVo {
   nav: NavItemVo[]
-  footer: FooterVo
-  home: HomeVo
-  pages: PagesVo
-  contact: ContactVo
-  musicPlaylistLink: MusicPlaylistLinkVo
 }
 
 export interface ProjectVo {

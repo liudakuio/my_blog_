@@ -1,4 +1,5 @@
-// 站点全局数据：配置（导航/页脚/首页/内页文案/联系信息）
+// 站点全局数据：导航菜单（/api/site/config 目前仅返回 nav；
+// 首页/联系/页脚/内页标题等文案已回退为 src/data 下的本地数据）
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getSiteConfig } from '@/api'
@@ -12,11 +13,6 @@ export const useSiteStore = defineStore('site', () => {
   const configLoaded = ref(false)
 
   const nav = computed(() => config.value?.nav ?? [])
-  const footer = computed(() => config.value?.footer ?? null)
-  const home = computed(() => config.value?.home ?? null)
-  const pages = computed(() => config.value?.pages ?? null)
-  const contact = computed(() => config.value?.contact ?? null)
-  const musicPlaylistLink = computed(() => config.value?.musicPlaylistLink ?? null)
 
   /** 加载站点配置，失败时保持 null（各页面按空态渲染） */
   async function loadConfig(force = false) {
@@ -44,11 +40,6 @@ export const useSiteStore = defineStore('site', () => {
     configLoading,
     configLoaded,
     nav,
-    footer,
-    home,
-    pages,
-    contact,
-    musicPlaylistLink,
     loadConfig,
     navItems
   }

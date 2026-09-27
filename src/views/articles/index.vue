@@ -137,12 +137,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Filter, Calendar, ArrowUp, ArrowDown, Reading, TopRight } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { useSiteStore } from '@/store/site'
 import { useArticleStore } from '@/store/articles'
+import { ARTICLES_PAGE_DATA } from '@/data/articlesPage'
 import { pickText } from '@/utils/i18n'
 
 const appStore = useAppStore()
-const siteStore = useSiteStore()
 const articleStore = useArticleStore()
 const router = useRouter()
 
@@ -151,14 +150,8 @@ const filter = ref<string>('All')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 const loading = computed(() => articleStore.loading)
 
-// 页面标题和描述
-const pageData = computed(() => {
-  const page = siteStore.pages?.articles
-  return {
-    title: pickText(page?.title, appStore.language),
-    description: pickText(page?.description, appStore.language)
-  }
-})
+// 页面标题和描述（本地维护，不读取后端 pages 节点）
+const pageData = computed(() => ARTICLES_PAGE_DATA[appStore.language])
 
 // 全部分类：接口下发的字典 + "全部"
 const categories = computed(() => ['All', ...articleStore.categories.map(item => item.value)])

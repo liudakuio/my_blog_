@@ -16,22 +16,14 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/store/app'
-import { useSiteStore } from '@/store/site'
-import { pickText } from '@/utils/i18n'
+import { PORTFOLIO_PAGE_DATA } from '@/data/portfolioPage'
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
-const siteStore = useSiteStore()
 
-// 页面标题和描述：来自 /api/site/config 的 pages.portfolio
-const pageData = computed(() => {
-  const page = siteStore.pages?.portfolio
-  return {
-    title: pickText(page?.title, appStore.language),
-    description: pickText(page?.description, appStore.language)
-  }
-})
+// 页面标题和描述（中英双语）
+const pageData = computed(() => PORTFOLIO_PAGE_DATA[appStore.language])
 // 从 URL query 参数获取筛选分类
 const routeFilter = computed(() => (route.query.filter as string) || 'All')
 </script>

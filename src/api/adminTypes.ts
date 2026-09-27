@@ -83,25 +83,13 @@ export interface AdminArticleCategoryVo {
   status?: string
 }
 
-/** 音乐播放列表 */
-export interface AdminMusicVo {
-  id: string
-  title: string
-  artist?: string
-  cover?: string
-  audio?: string
-  sort?: number
-  status?: string
-}
-
-/** 资源名 -> VO 类型映射 */
+/** 资源名 -> VO 类型映射（music / social 的专用接口已由后端移除，走通用 CRUD） */
 export interface AdminVoMap {
   site_text: AdminSiteTextVo
   project: AdminProjectVo
   project_category: AdminProjectCategoryVo
   article: AdminArticleVo
   article_category: AdminArticleCategoryVo
-  music: AdminMusicVo
   education_text: AdminEducationTextVo
 }
 

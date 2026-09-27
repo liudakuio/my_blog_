@@ -14,8 +14,8 @@
       </router-view>
       <!-- 页脚：版权信息 + 设计声明 -->
       <footer class="footer">
-        <p>{{ footerContent.copyright }}</p>
-        <p>{{ footerContent.designStatement }}</p>
+        <p>&copy; 2026 刘中魁</p>
+        <p>{{ contactContent.footerDesign }}</p>
       </footer>
     </main>
   </div>
@@ -24,22 +24,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAppStore } from '@/store/app'
-import { useSiteStore } from '@/store/site'
-import { pickText } from '@/utils/i18n'
+import { CONTACT_DATA } from '@/data/home'
 import SidebarNav from './components/SidebarNav.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 
 const appStore = useAppStore()
-const siteStore = useSiteStore()
-
-// 页脚文案：版权 + 设计声明，来自 /api/site/config
-const footerContent = computed(() => {
-  const footer = siteStore.footer
-  return {
-    copyright: pickText(footer?.copyright, appStore.language, ''),
-    designStatement: pickText(footer?.designStatement, appStore.language, '')
-  }
-})
+// 联系方式数据（用于页脚设计声明文案）
+const contactContent = computed(() => CONTACT_DATA[appStore.language])
 </script>
 
 <style lang="less" scoped>
