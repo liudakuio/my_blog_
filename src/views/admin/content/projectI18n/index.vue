@@ -1,162 +1,257 @@
-<!-- 作品多语（通用接口 /api/admin/project_i18n，下划线字段） -->
+<!--
+  作品多语（/api/admin/project_i18n，通用接口下划线字段）
+  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+-->
 <template>
-  <div class="ry-page">
-    <RySearchBar
-      v-model="filters"
-      :fields="searchFields"
-      :visible="searchVisible"
-      @search="query"
-      @reset="resetQuery"
-    />
-
-    <div class="ry-card">
-      <RyToolbar
-        :editable="editable"
-        :selection-count="selection.length"
-        :search-visible="searchVisible"
-        :total="total"
-        @add="openAdd"
-        @edit="openEdit(selection[0])"
-        @delete="batchRemove"
-        @refresh="query"
-        @toggle-search="searchVisible = !searchVisible"
-      />
-
-      <div class="ry-grid">
-        <el-table
-          v-loading="loading"
-          :data="list"
-          border
-          stripe
-          row-key="id"
-          @selection-change="onSelectionChange"
-        >
-          <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="id" label="ID" width="70" align="center" />
-          <el-table-column prop="project_id" label="作品ID" width="140" show-overflow-tooltip />
-          <el-table-column label="语言" width="90" align="center">
-            <template #default="{ row }">
-              <RyStatusTag :value="row.lang" :options="LANG_OPTIONS" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
-          <el-table-column prop="subtitle" label="副标题" min-width="160" show-overflow-tooltip />
-          <el-table-column prop="role" label="角色" min-width="140" show-overflow-tooltip />
-          <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
-            <template #default="{ row }">
-              <el-button link type="primary" :icon="Edit" @click="openEdit(row)">修改</el-button>
-              <el-button link type="primary" :icon="Delete" @click="remove(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+  <div class="app-container">
+    <!-- 搜索区 -->
+    <div v-show="showSearch" class="search-card">
+      <el-form :model="queryParams" inline @submit.prevent>
+        <el-form-item label="作品ID">
+          <el-input
+            v-model="queryParams.project_id"
+            placeholder="作品ID"
+            clearable style="width: 180px"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="语言">
+          <el-select v-model="queryParams.lang" placeholder="语言" clearable style="width: 180px">
+            <el-option v-for="o in LANG_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标题">
+          <el-input
+            v-model="queryParams.title"
+            placeholder="标题"
+            clearable style="width: 180px"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleQuery">搜索</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
     </div>
 
-    <RyFormDialog
+    <!-- 数据表格 -->
+    <div class="table-card">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button v-if="editable" type="primary" :icon="Plus" @click="handleAdd">新增</el-button>
+          <el-button
+            v-if="editable"
+            type="success"
+            plain
+            :icon="Edit"
+            :disabled="selection.length !== 1"
+            @click="handleUpdate()"
+          >
+            修改
+          </el-button>
+          <el-button
+            v-if="editable"
+            type="danger"
+            plain
+            :icon="Delete"
+            :disabled="selection.length === 0"
+            @click="handleDelete()"
+          >
+            删除
+          </el-button>
+        </div>
+        <div class="toolbar-right">
+          <el-tooltip :content="showSearch ? '隐藏搜索' : '显示搜索'" placement="top">
+            <button class="icon-btn" @click="showSearch = !showSearch">
+              <el-icon>
+                <ArrowUp v-if="showSearch" />
+                <ArrowDown v-else />
+              </el-icon>
+            </button>
+          </el-tooltip>
+          <el-tooltip content="刷新" placement="top">
+            <button class="icon-btn" @click="getList">
+              <el-icon><Refresh /></el-icon>
+            </button>
+          </el-tooltip>
+          <span class="total-text">共 {{ total }} 条</span>
+        </div>
+      </div>
+
+      <el-table
+        v-loading="loading"
+        :data="list"
+        border
+        stripe
+        row-key="id"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="id" label="ID" width="70" align="center" show-overflow-tooltip />
+        <el-table-column prop="project_id" label="作品ID" width="140" show-overflow-tooltip />
+        <el-table-column label="语言" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.lang === 'zh' ? 'success' : 'info'" effect="light" size="small">
+              {{ row.lang === 'zh' ? '中文' : '英文' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="title" label="标题" width="200" show-overflow-tooltip />
+        <el-table-column prop="subtitle" label="副标题" width="180" show-overflow-tooltip />
+        <el-table-column prop="role" label="角色" width="160" show-overflow-tooltip />
+        <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="handleUpdate(row)">修改</el-button>
+            <el-button link type="primary" :icon="Delete" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 添加 / 修改弹窗 -->
+    <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      :saving="saving"
       width="720px"
-      @confirm="submit"
+      append-to-body
+      :close-on-click-modal="false"
+      destroy-on-close
     >
-      <el-form ref="formRef" :model="formData" label-width="96px" :rules="rules">
+      <el-form ref="formRef" :model="form" label-width="110px" :rules="rules">
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="作品ID" prop="project_id">
-              <el-input v-model="formData.project_id" placeholder="关联 project.id" />
+              <el-input v-model="form.project_id" placeholder="作品ID" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="语言" prop="lang">
-              <el-select v-model="formData.lang" class="w-full">
+              <el-select v-model="form.lang" class="w-full">
                 <el-option v-for="o in LANG_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="标题" prop="title">
-              <el-input v-model="formData.title" placeholder="作品标题" />
+              <el-input v-model="form.title" placeholder="标题" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="副标题" prop="subtitle">
-              <el-input v-model="formData.subtitle" placeholder="一句话简介" />
+              <el-input v-model="form.subtitle" placeholder="副标题" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="描述" prop="description">
-              <el-input v-model="formData.description" type="textarea" :rows="3" />
+              <el-input v-model="form.description" type="textarea" :rows="3" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="角色" prop="role">
-              <el-input v-model="formData.role" placeholder="如 交互设计 / 前端开发" />
+              <el-input v-model="form.role" placeholder="角色" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="角色详情" prop="role_detail">
-              <el-input v-model="formData.role_detail" type="textarea" :rows="3" />
+              <el-input v-model="form.role_detail" type="textarea" :rows="3" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="理念" prop="concept">
-              <el-input v-model="formData.concept" type="textarea" :rows="3" />
+              <el-input v-model="form.concept" type="textarea" :rows="3" />
             </el-form-item>
           </el-col>
         </el-row>
       </el-form>
-    </RyFormDialog>
+      <template #footer>
+        <el-button @click="cancel">取 消</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">确 定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { Delete, Edit } from '@element-plus/icons-vue'
-import RySearchBar from '../../shared/RySearchBar.vue'
-import RyToolbar from '../../shared/RyToolbar.vue'
-import RyFormDialog from '../../shared/RyFormDialog.vue'
-import RyStatusTag from '../../shared/RyStatusTag.vue'
-import { useResourceCrud } from '../../shared/useResourceCrud'
-import { LANG_OPTIONS, type RySearchField } from '../../shared/types'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  ArrowDown,
+  ArrowUp,
+  Delete,
+  Edit,
+  Plus,
+  Refresh,
+  Search
+} from '@element-plus/icons-vue'
+import { useUserStore } from '@/store/user'
+import { adminList, adminGet, adminCreate, adminUpdate, adminDelete } from '@/api/admin'
 
-const searchVisible = ref(true)
+const userStore = useUserStore()
+const editable = computed(() => userStore.canEdit('project_i18n'))
 
-const searchFields: RySearchField[] = [
-  { key: 'project_id', label: '作品ID' },
-  { key: 'lang', label: '语言', type: 'select', options: LANG_OPTIONS },
-  { key: 'title', label: '标题' }
+const LANG_OPTIONS = [
+  { label: '中文', value: 'zh' },
+  { label: '英文', value: 'en' }
 ]
+// ---------------- 列表 ----------------
+const list = ref<any[]>([])
+const loading = ref(false)
+const total = ref(0)
+const selection = ref<any[]>([])
+const showSearch = ref(true)
+const advanced = ref(false)
 
-const rules = {
-  project_id: [{ required: true, message: '作品ID不能为空', trigger: 'blur' }]
+const queryParams = reactive<Record<string, any>>({
+  project_id: '',
+  lang: '',
+  title: ''
+})
+
+async function getList() {
+  loading.value = true
+  try {
+    const params: Record<string, any> = {}
+    Object.keys(queryParams).forEach((k) => {
+      const v = queryParams[k]
+      if (v !== '' && v !== undefined && v !== null) params[k] = v
+    })
+    const data = await adminList('project_i18n', params)
+    list.value = Array.isArray(data) ? data : []
+    total.value = list.value.length
+  } catch (e) {
+    console.error('[admin] 作品多语列表加载失败', e)
+    list.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
-const {
-  list,
-  loading,
-  filters,
-  selection,
-  editable,
-  total,
-  dialogVisible,
-  dialogTitle,
-  isEdit,
-  saving,
-  formRef,
-  formData,
-  query,
-  resetQuery,
-  openAdd,
-  openEdit,
-  submit,
-  remove,
-  batchRemove,
-  onSelectionChange
-} = useResourceCrud({
-  resource: 'project_i18n',
-  title: '作品多语',
-  defaultFilters: { project_id: '', lang: '', title: '' },
-  defaultForm: {
+function handleQuery() {
+  getList()
+}
+
+function resetQuery() {
+  Object.keys(queryParams).forEach((k) => {
+    queryParams[k] = ''
+  })
+  getList()
+}
+
+function handleSelectionChange(rows: any[]) {
+  selection.value = rows
+}
+
+// ---------------- 弹窗表单 ----------------
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const saving = ref(false)
+const formRef = ref<any>(null)
+const editingId = ref<string | number | null>(null)
+const isEdit = computed(() => editingId.value !== null)
+
+const defaultForm = () => ({
     project_id: '',
     lang: 'zh',
     title: '',
@@ -165,8 +260,189 @@ const {
     role: '',
     role_detail: '',
     concept: ''
-  }
 })
+const form = reactive(defaultForm())
 
-onMounted(query)
+const rules = {
+  project_id: [{ required: true, message: '作品ID不能为空', trigger: 'blur' }]
+}
+
+function handleAdd() {
+  editingId.value = null
+  dialogTitle.value = '添加作品多语'
+  Object.assign(form, defaultForm())
+  dialogVisible.value = true
+}
+
+async function handleUpdate(row?: any) {
+  const target = row ?? selection.value[0]
+  if (!target) return
+  editingId.value = target.id
+  dialogTitle.value = '修改作品多语'
+  Object.assign(form, defaultForm(), target)
+  try {
+    const detail: any = await adminGet('project_i18n', target.id)
+    if (detail) Object.assign(form, detail)
+  } catch (e) {
+    console.error('[admin] 作品多语详情加载失败，使用行数据兜底', e)
+  }
+  dialogVisible.value = true
+}
+
+function cancel() {
+  dialogVisible.value = false
+}
+
+async function submitForm() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+  saving.value = true
+  try {
+    const payload: Record<string, any> = {}
+    payload.project_id = form.project_id
+    payload.lang = form.lang
+    payload.title = form.title
+    payload.subtitle = form.subtitle
+    payload.description = form.description
+    payload.role = form.role
+    payload.role_detail = form.role_detail
+    payload.concept = form.concept
+    if (editingId.value !== null) {
+      await adminUpdate('project_i18n', editingId.value, payload)
+      ElMessage.success('修改成功')
+    } else {
+      await adminCreate('project_i18n', payload)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    getList()
+  } catch (e) {
+    console.error('[admin] 作品多语保存失败', e)
+  } finally {
+    saving.value = false
+  }
+}
+
+// ---------------- 删除 ----------------
+async function handleDelete(row?: any) {
+  const rows = row ? [row] : selection.value
+  if (!rows.length) return
+  const ok = await ElMessageBox.confirm(
+    row ? '确认删除该条数据？' : `确认删除选中的 ${rows.length} 条数据？`,
+    '提示',
+    { type: 'warning' }
+  )
+    .then(() => true)
+    .catch(() => false)
+  if (!ok) return
+
+  const results = await Promise.allSettled(
+    rows.map((r: any) => adminDelete('project_i18n', r.id))
+  )
+  const failed = results.filter((r) => r.status === 'rejected')
+  failed.forEach((r: any) => console.error('[admin] 作品多语删除失败', r.reason))
+  if (failed.length) {
+    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
+  } else {
+    ElMessage.success(`已删除 ${results.length} 条`)
+  }
+  getList()
+}
+
+onMounted(getList)
 </script>
+
+<style lang="less" scoped>
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 16px 16px 0;
+
+  .dark & {
+    background: #141414;
+    border-color: #2a2a2a;
+  }
+
+  :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+}
+
+.table-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+
+  .dark & {
+    background: #141414;
+    border-color: #2a2a2a;
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  flex-wrap: wrap;
+
+  .dark & {
+    border-color: #2a2a2a;
+  }
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-text {
+  margin-left: 4px;
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ebeef5;
+  border-radius: 50%;
+  background: transparent;
+  color: #5a5a5a;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #409eff;
+    border-color: #409eff;
+    background: #f5f7fa;
+  }
+}
+
+.thumb {
+  width: 56px;
+  height: 40px;
+  border-radius: 3px;
+  display: block;
+  background: #f5f7fa;
+}
+
+.w-full {
+  width: 100%;
+}
+
+</style>

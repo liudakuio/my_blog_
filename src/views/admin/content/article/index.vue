@@ -1,101 +1,160 @@
-<!-- 文章列表（专用接口 /api/admin/article，驼峰 VO；正文为 Markdown，弹窗全屏编辑） -->
+<!--
+  文章列表（/api/admin/article，专用接口驼峰 VO；正文为 Markdown）
+  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+-->
 <template>
-  <div class="ry-page">
-    <RySearchBar
-      v-model="filters"
-      :fields="searchFields"
-      :visible="searchVisible"
-      @search="query"
-      @reset="resetQuery"
-    />
-
-    <div class="ry-card">
-      <RyToolbar
-        :editable="editable"
-        :selection-count="selection.length"
-        :search-visible="searchVisible"
-        :total="total"
-        @add="openAdd"
-        @edit="openEdit(selection[0])"
-        @delete="batchRemove"
-        @refresh="query"
-        @toggle-search="searchVisible = !searchVisible"
-      />
-
-      <div class="ry-grid">
-        <el-table
-          v-loading="loading"
-          :data="list"
-          border
-          stripe
-          row-key="id"
-          @selection-change="onSelectionChange"
-        >
-          <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="id" label="文章ID" width="140" show-overflow-tooltip />
-          <el-table-column prop="category" label="分类" width="120" show-overflow-tooltip />
-          <el-table-column label="封面" width="90" align="center">
-            <template #default="{ row }">
-              <el-image
-                v-if="row.coverImage"
-                :src="row.coverImage"
-                fit="cover"
-                class="ry-thumb"
-                :preview-src-list="[row.coverImage]"
-                preview-teleported
-              />
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="publishDate" label="发布日期" width="120" align="center" />
-          <el-table-column label="外链" min-width="180" show-overflow-tooltip>
-            <template #default="{ row }">
-              <a v-if="row.link" :href="row.link" target="_blank" class="ry-cell-link">
-                {{ row.link }}
-              </a>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="sort" label="排序" width="80" align="center" />
-          <el-table-column label="状态" width="90" align="center">
-            <template #default="{ row }">
-              <RyStatusTag :value="row.status" />
-            </template>
-          </el-table-column>
-          <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
-            <template #default="{ row }">
-              <el-button link type="primary" :icon="Edit" @click="openEdit(row)">修改</el-button>
-              <el-button link type="primary" :icon="Delete" @click="remove(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+  <div class="app-container">
+    <!-- 搜索区 -->
+    <div v-show="showSearch" class="search-card">
+      <el-form :model="queryParams" inline @submit.prevent>
+        <el-form-item label="文章ID">
+          <el-input
+            v-model="queryParams.id"
+            placeholder="请输入文章ID"
+            clearable
+            style="width: 180px"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-input
+            v-model="queryParams.category"
+            placeholder="请输入分类"
+            clearable
+            style="width: 180px"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="queryParams.status" placeholder="状态" clearable style="width: 180px">
+            <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleQuery">搜索</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
     </div>
 
-    <RyFormDialog
+    <!-- 数据表格 -->
+    <div class="table-card">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button v-if="editable" type="primary" :icon="Plus" @click="handleAdd">新增</el-button>
+          <el-button
+            v-if="editable"
+            type="success"
+            plain
+            :icon="Edit"
+            :disabled="selection.length !== 1"
+            @click="handleUpdate()"
+          >
+            修改
+          </el-button>
+          <el-button
+            v-if="editable"
+            type="danger"
+            plain
+            :icon="Delete"
+            :disabled="selection.length === 0"
+            @click="handleDelete()"
+          >
+            删除
+          </el-button>
+        </div>
+        <div class="toolbar-right">
+          <el-tooltip :content="showSearch ? '隐藏搜索' : '显示搜索'" placement="top">
+            <button class="icon-btn" @click="showSearch = !showSearch">
+              <el-icon>
+                <ArrowUp v-if="showSearch" />
+                <ArrowDown v-else />
+              </el-icon>
+            </button>
+          </el-tooltip>
+          <el-tooltip content="刷新" placement="top">
+            <button class="icon-btn" @click="getList">
+              <el-icon><Refresh /></el-icon>
+            </button>
+          </el-tooltip>
+          <span class="total-text">共 {{ total }} 条</span>
+        </div>
+      </div>
+
+      <el-table
+        v-loading="loading"
+        :data="list"
+        border
+        stripe
+        row-key="id"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="id" label="文章ID" width="140" show-overflow-tooltip />
+        <el-table-column prop="category" label="分类" width="120" show-overflow-tooltip />
+        <el-table-column label="封面" width="90" align="center">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.coverImage"
+              :src="row.coverImage"
+              fit="cover"
+              class="thumb"
+              :preview-src-list="[row.coverImage]"
+              preview-teleported
+            />
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="publishDate" label="发布日期" width="120" align="center" />
+        <el-table-column label="外链" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">
+            <a v-if="row.link" :href="row.link" target="_blank" class="cell-link">{{ row.link }}</a>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sort" label="排序" width="80" align="center" />
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === '0' ? 'success' : 'info'" effect="light" size="small">
+              {{ row.status === '0' ? '正常' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="handleUpdate(row)">修改</el-button>
+            <el-button link type="primary" :icon="Delete" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 添加 / 修改弹窗（正文为 Markdown，使用全屏弹窗） -->
+    <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      :saving="saving"
       width="1080px"
       fullscreen
-      @confirm="submit"
+      append-to-body
+      :close-on-click-modal="false"
+      destroy-on-close
     >
-      <el-form ref="formRef" :model="formData" label-width="96px" :rules="rules">
+      <el-form ref="formRef" :model="form" label-width="96px" :rules="rules">
         <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="文章ID" prop="id">
-              <el-input v-model="formData.id" :disabled="isEdit" placeholder="唯一标识，如 a1" />
+              <el-input v-model="form.id" :disabled="isEdit" placeholder="唯一标识，如 a1" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="分类" prop="category">
-              <el-input v-model="formData.category" placeholder="如 notes" />
+              <el-input v-model="form.category" placeholder="如 notes" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="发布日期" prop="publishDate">
               <el-date-picker
-                v-model="formData.publishDate"
+                v-model="form.publishDate"
                 type="date"
                 value-format="YYYY-MM-DD"
                 placeholder="选择日期"
@@ -105,109 +164,448 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="排序" prop="sort">
-              <el-input-number v-model="formData.sort" :controls="false" class="w-full" />
+              <el-input-number v-model="form.sort" :controls="false" class="w-full" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="状态" prop="status">
-              <el-select v-model="formData.status" class="w-full">
+              <el-select v-model="form.status" class="w-full">
                 <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="封面" prop="coverImage">
-              <ImageUpload v-model="formData.coverImage" />
+              <div class="image-upload">
+                <el-image
+                  v-if="form.coverImage"
+                  :src="form.coverImage"
+                  fit="cover"
+                  class="iu-thumb"
+                  :preview-src-list="[form.coverImage]"
+                  preview-teleported
+                />
+                <div v-else class="iu-empty">
+                  <el-icon><Picture /></el-icon>
+                  <span>未上传</span>
+                </div>
+                <p v-if="uploadError" class="iu-error">{{ uploadError }}</p>
+                <el-upload
+                  :show-file-list="false"
+                  :accept="ACCEPT"
+                  :disabled="!canUpload"
+                  :before-upload="beforeUpload"
+                  :http-request="handleUpload"
+                >
+                  <el-button type="primary" size="small" :loading="uploading" :disabled="!canUpload">
+                    {{ form.coverImage ? '重新上传' : '上传图片' }}
+                  </el-button>
+                </el-upload>
+                <el-button
+                  v-if="form.coverImage"
+                  size="small"
+                  type="danger"
+                  plain
+                  :disabled="!canUpload"
+                  @click="form.coverImage = ''"
+                >
+                  移除
+                </el-button>
+              </div>
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="外链" prop="link">
-              <el-input v-model="formData.link" placeholder="https://（可选）" />
+              <el-input v-model="form.link" placeholder="https://（可选）" />
             </el-form-item>
           </el-col>
           <el-col :span="24">
             <el-form-item label="备注" prop="remark">
-              <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="内部备注" />
+              <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="内部备注" />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-divider content-position="left">正文内容</el-divider>
-        <MdEditor v-model="formData.content" :theme="mdTheme" :height="mdHeight" :preview="true" />
+        <MdEditor v-model="form.content" :theme="mdTheme" :height="mdHeight" :preview="true" />
       </el-form>
-    </RyFormDialog>
+      <template #footer>
+        <el-button @click="cancel">取 消</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">确 定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Delete, Edit } from '@element-plus/icons-vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { UploadRequestOptions } from 'element-plus'
+import {
+  ArrowDown,
+  ArrowUp,
+  Delete,
+  Edit,
+  Picture,
+  Plus,
+  Refresh,
+  Search
+} from '@element-plus/icons-vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import RySearchBar from '../../shared/RySearchBar.vue'
-import RyToolbar from '../../shared/RyToolbar.vue'
-import RyFormDialog from '../../shared/RyFormDialog.vue'
-import RyStatusTag from '../../shared/RyStatusTag.vue'
-import ImageUpload from '../../shared/ImageUpload.vue'
-import { useResourceCrud } from '../../shared/useResourceCrud'
-import { STATUS_OPTIONS, type RySearchField } from '../../shared/types'
+import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
+import { adminUploadImage } from '@/api/admin'
+import {
+  adminResourceList,
+  adminResourceGet,
+  adminResourceCreate,
+  adminResourceUpdate,
+  adminResourceDelete
+} from '@/api/adminResource'
 
+const userStore = useUserStore()
 const appStore = useAppStore()
-const searchVisible = ref(true)
+const editable = computed(() => userStore.canEdit('article'))
+const canUpload = computed(() => userStore.hasPerm('blog:upload:edit'))
 
 // Markdown 编辑器主题跟随全局深色模式
 const mdTheme = computed(() => (appStore.isDark ? 'dark' : 'light'))
 const mdHeight = computed(() => Math.max(420, window.innerHeight - 420))
 
-const searchFields: RySearchField[] = [
-  { key: 'id', label: '文章ID' },
-  { key: 'category', label: '分类' },
-  { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS }
+const STATUS_OPTIONS = [
+  { label: '正常', value: '0' },
+  { label: '停用', value: '1' }
 ]
+
+// ---------------- 列表 ----------------
+const list = ref<any[]>([])
+const loading = ref(false)
+const total = ref(0)
+const selection = ref<any[]>([])
+const showSearch = ref(true)
+
+const queryParams = reactive<Record<string, any>>({ id: '', category: '', status: '' })
+
+async function getList() {
+  loading.value = true
+  try {
+    const params: Record<string, any> = {}
+    Object.keys(queryParams).forEach((k) => {
+      const v = queryParams[k]
+      if (v !== '' && v !== undefined && v !== null) params[k] = v
+    })
+    const data = await adminResourceList('article', params)
+    list.value = Array.isArray(data) ? data : []
+    total.value = list.value.length
+  } catch (e) {
+    console.error('[admin] 文章列表加载失败', e)
+    list.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleQuery() {
+  getList()
+}
+
+function resetQuery() {
+  Object.keys(queryParams).forEach((k) => {
+    queryParams[k] = ''
+  })
+  getList()
+}
+
+function handleSelectionChange(rows: any[]) {
+  selection.value = rows
+}
+
+// ---------------- 弹窗表单 ----------------
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const saving = ref(false)
+const formRef = ref<any>(null)
+const editingId = ref<string | number | null>(null)
+const isEdit = computed(() => editingId.value !== null)
+
+const defaultForm = () => ({
+  id: '',
+  category: '',
+  link: '',
+  coverImage: '',
+  publishDate: '',
+  sort: 0,
+  status: '0',
+  remark: '',
+  content: ''
+})
+const form = reactive(defaultForm())
 
 const rules = {
   id: [{ required: true, message: '文章ID不能为空', trigger: 'blur' }],
   category: [{ required: true, message: '分类不能为空', trigger: 'blur' }]
 }
 
-const {
-  list,
-  loading,
-  filters,
-  selection,
-  editable,
-  total,
-  dialogVisible,
-  dialogTitle,
-  isEdit,
-  saving,
-  formRef,
-  formData,
-  query,
-  resetQuery,
-  openAdd,
-  openEdit,
-  submit,
-  remove,
-  batchRemove,
-  onSelectionChange
-} = useResourceCrud({
-  resource: 'article',
-  title: '文章',
-  defaultFilters: { id: '', category: '', status: '' },
-  defaultForm: {
-    id: '',
-    category: '',
-    link: '',
-    coverImage: '',
-    publishDate: '',
-    sort: 0,
-    status: '0',
-    remark: '',
-    content: ''
-  }
-})
+function handleAdd() {
+  editingId.value = null
+  dialogTitle.value = '添加文章'
+  Object.assign(form, defaultForm())
+  dialogVisible.value = true
+}
 
-onMounted(query)
+async function handleUpdate(row?: any) {
+  const target = row ?? selection.value[0]
+  if (!target) return
+  editingId.value = target.id
+  dialogTitle.value = '修改文章'
+  Object.assign(form, defaultForm(), target)
+  try {
+    const detail: any = await adminResourceGet('article', target.id)
+    if (detail) Object.assign(form, detail)
+  } catch (e) {
+    console.error('[admin] 文章详情加载失败，使用行数据兜底', e)
+  }
+  dialogVisible.value = true
+}
+
+function cancel() {
+  dialogVisible.value = false
+}
+
+async function submitForm() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+  saving.value = true
+  try {
+    const payload: Record<string, any> = {}
+    Object.keys(defaultForm()).forEach((k) => {
+      payload[k] = (form as any)[k]
+    })
+    if (editingId.value !== null) {
+      await adminResourceUpdate('article', editingId.value, payload)
+      ElMessage.success('修改成功')
+    } else {
+      await adminResourceCreate('article', payload)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    getList()
+  } catch (e) {
+    console.error('[admin] 文章保存失败', e)
+  } finally {
+    saving.value = false
+  }
+}
+
+// ---------------- 删除 ----------------
+async function handleDelete(row?: any) {
+  const rows = row ? [row] : selection.value
+  if (!rows.length) return
+  const ok = await ElMessageBox.confirm(
+    row ? '确认删除该条数据？' : `确认删除选中的 ${rows.length} 条数据？`,
+    '提示',
+    { type: 'warning' }
+  )
+    .then(() => true)
+    .catch(() => false)
+  if (!ok) return
+
+  const results = await Promise.allSettled(
+    rows.map((r: any) => adminResourceDelete('article', r.id))
+  )
+  const failed = results.filter((r) => r.status === 'rejected')
+  failed.forEach((r: any) => console.error('[admin] 文章删除失败', r.reason))
+  if (failed.length) {
+    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
+  } else {
+    ElMessage.success(`已删除 ${results.length} 条`)
+  }
+  getList()
+}
+
+// ---------------- 封面上传 ----------------
+const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+const MAX_SIZE = 5 * 1024 * 1024
+const ACCEPT = ALLOWED_EXT.map((e) => '.' + e).join(',')
+const uploading = ref(false)
+const uploadError = ref('')
+
+function beforeUpload(file: File) {
+  uploadError.value = ''
+  const ext = (file.name.split('.').pop() || '').toLowerCase()
+  if (!ALLOWED_EXT.includes(ext)) {
+    uploadError.value = `不支持的图片类型：${ext || '未知'}（仅支持 ${ALLOWED_EXT.join('/')}）`
+    return false
+  }
+  if (file.size > MAX_SIZE) {
+    uploadError.value = `图片超过 5MB（当前 ${(file.size / 1024 / 1024).toFixed(2)}MB）`
+    return false
+  }
+  return true
+}
+
+async function handleUpload(options: UploadRequestOptions) {
+  uploading.value = true
+  try {
+    const res = await adminUploadImage(options.file)
+    form.coverImage = res.url
+    ElMessage.success('上传成功')
+    options.onSuccess(res as any)
+  } catch (e: any) {
+    uploadError.value = e?.message || '上传失败'
+    options.onError(e)
+  } finally {
+    uploading.value = false
+  }
+}
+
+onMounted(getList)
 </script>
+
+<style lang="less" scoped>
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 16px 16px 0;
+
+  .dark & {
+    background: #141414;
+    border-color: #2a2a2a;
+  }
+
+  :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+}
+
+.table-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+
+  .dark & {
+    background: #141414;
+    border-color: #2a2a2a;
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  flex-wrap: wrap;
+
+  .dark & {
+    border-color: #2a2a2a;
+  }
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-text {
+  margin-left: 4px;
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ebeef5;
+  border-radius: 50%;
+  background: transparent;
+  color: #5a5a5a;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #409eff;
+    border-color: #409eff;
+    background: #f5f7fa;
+  }
+}
+
+.thumb {
+  width: 56px;
+  height: 40px;
+  border-radius: 3px;
+  display: block;
+  background: #f5f7fa;
+}
+
+.cell-link {
+  color: #409eff;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.w-full {
+  width: 100%;
+}
+
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.iu-thumb {
+  width: 120px;
+  height: 90px;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+  background: #f3f4f6;
+
+  .dark & {
+    border-color: #2a2a2a;
+  }
+}
+
+.iu-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 120px;
+  height: 90px;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  color: #9ca3af;
+
+  .dark & {
+    border-color: #2a2a2a;
+    color: #6b7280;
+  }
+}
+
+.iu-error {
+  margin: 0;
+  color: #f56c6c;
+  font-size: 12px;
+}
+</style>

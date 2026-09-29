@@ -1,91 +1,149 @@
-<!-- 用户管理（/api/system/user，主键 userId） -->
+<!--
+  用户管理（/api/system/user，主键 userId）
+  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+-->
 <template>
-  <div class="ry-page">
-    <RySearchBar
-      v-model="filters"
-      :fields="searchFields"
-      :visible="searchVisible"
-      @search="query"
-      @reset="resetQuery"
-    />
-
-    <div class="ry-card">
-      <RyToolbar
-        :editable="editable"
-        :selection-count="selection.length"
-        :search-visible="searchVisible"
-        :total="total"
-        @add="openAdd"
-        @edit="openEdit(selection[0])"
-        @delete="batchRemove"
-        @refresh="query"
-        @toggle-search="searchVisible = !searchVisible"
-      />
-
-      <div class="ry-grid">
-        <el-table
-          v-loading="loading"
-          :data="list"
-          border
-          stripe
-          row-key="userId"
-          @selection-change="onSelectionChange"
-        >
-          <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="userId" label="ID" width="80" align="center" />
-          <el-table-column prop="username" label="用户名" min-width="160" show-overflow-tooltip />
-          <el-table-column prop="nickName" label="昵称" min-width="160" show-overflow-tooltip />
-          <el-table-column label="状态" width="90" align="center">
-            <template #default="{ row }">
-              <RyStatusTag :value="row.status" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="180" show-overflow-tooltip />
-          <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
-            <template #default="{ row }">
-              <el-button link type="primary" :icon="Edit" @click="openEdit(row)">修改</el-button>
-              <el-button link type="primary" :icon="Delete" @click="remove(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+  <div class="app-container">
+    <!-- 搜索区 -->
+    <div v-show="showSearch" class="search-card">
+      <el-form :model="queryParams" inline @submit.prevent>
+        <el-form-item label="用户名">
+          <el-input
+            v-model="queryParams.username"
+            placeholder="请输入用户名"
+            clearable
+            style="width: 180px"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="queryParams.status" placeholder="状态" clearable style="width: 180px">
+            <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleQuery">搜索</el-button>
+          <el-button :icon="Refresh" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
     </div>
 
-    <RyFormDialog v-model="dialogVisible" :title="dialogTitle" :saving="saving" @confirm="submit">
-      <el-form ref="formRef" :model="formData" label-width="90px" :rules="rules">
+    <!-- 数据表格 -->
+    <div class="table-card">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button v-if="editable" type="primary" :icon="Plus" @click="handleAdd">新增</el-button>
+          <el-button
+            v-if="editable"
+            type="success"
+            plain
+            :icon="Edit"
+            :disabled="selection.length !== 1"
+            @click="handleUpdate()"
+          >
+            修改
+          </el-button>
+          <el-button
+            v-if="editable"
+            type="danger"
+            plain
+            :icon="Delete"
+            :disabled="selection.length === 0"
+            @click="handleDelete()"
+          >
+            删除
+          </el-button>
+        </div>
+        <div class="toolbar-right">
+          <el-tooltip :content="showSearch ? '隐藏搜索' : '显示搜索'" placement="top">
+            <button class="icon-btn" @click="showSearch = !showSearch">
+              <el-icon>
+                <ArrowUp v-if="showSearch" />
+                <ArrowDown v-else />
+              </el-icon>
+            </button>
+          </el-tooltip>
+          <el-tooltip content="刷新" placement="top">
+            <button class="icon-btn" @click="getList">
+              <el-icon><Refresh /></el-icon>
+            </button>
+          </el-tooltip>
+          <span class="total-text">共 {{ total }} 条</span>
+        </div>
+      </div>
+
+      <el-table
+        v-loading="loading"
+        :data="list"
+        border
+        stripe
+        row-key="userId"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="userId" label="ID" width="80" align="center" />
+        <el-table-column prop="username" label="用户名" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="nickName" label="昵称" min-width="160" show-overflow-tooltip />
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === '0' ? 'success' : 'info'" effect="light" size="small">
+              {{ row.status === '0' ? '正常' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" show-overflow-tooltip />
+        <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="handleUpdate(row)">修改</el-button>
+            <el-button link type="primary" :icon="Delete" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 添加 / 修改弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="600px"
+      append-to-body
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <el-form ref="formRef" :model="form" label-width="90px" :rules="rules">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="formData.username" :disabled="isEdit" placeholder="登录用户名" />
+          <el-input v-model="form.username" :disabled="isEdit" placeholder="登录用户名" />
         </el-form-item>
         <el-form-item label="昵称" prop="nickName">
-          <el-input v-model="formData.nickName" placeholder="显示名称" />
+          <el-input v-model="form.nickName" placeholder="显示名称" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="formData.status" class="w-full">
+          <el-select v-model="form.status" class="w-full">
             <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="密码" prop="password">
           <el-input
-            v-model="formData.password"
+            v-model="form.password"
             type="password"
             show-password
             :placeholder="isEdit ? '留空表示不修改密码' : '必填，后端 BCrypt 加密'"
           />
         </el-form-item>
       </el-form>
-    </RyFormDialog>
+      <template #footer>
+        <el-button @click="cancel">取 消</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">确 定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Delete, Edit } from '@element-plus/icons-vue'
-import RySearchBar from '../../shared/RySearchBar.vue'
-import RyToolbar from '../../shared/RyToolbar.vue'
-import RyFormDialog from '../../shared/RyFormDialog.vue'
-import RyStatusTag from '../../shared/RyStatusTag.vue'
-import { useResourceCrud } from '../../shared/useResourceCrud'
-import { STATUS_OPTIONS, type RySearchField } from '../../shared/types'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown, ArrowUp, Delete, Edit, Plus, Refresh, Search } from '@element-plus/icons-vue'
+import { useUserStore } from '@/store/user'
 import {
   systemUserList,
   systemUserGet,
@@ -94,54 +152,68 @@ import {
   systemUserDelete
 } from '@/api/system'
 
-const searchVisible = ref(true)
+const userStore = useUserStore()
+const editable = computed(() => userStore.hasPerm('system:user:edit'))
 
-const searchFields: RySearchField[] = [
-  { key: 'username', label: '用户名' },
-  { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS }
+const STATUS_OPTIONS = [
+  { label: '正常', value: '0' },
+  { label: '停用', value: '1' }
 ]
 
-const {
-  list,
-  loading,
-  filters,
-  selection,
-  editable,
-  total,
-  dialogVisible,
-  dialogTitle,
-  isEdit,
-  saving,
-  formRef,
-  formData,
-  query,
-  resetQuery,
-  openAdd,
-  openEdit,
-  submit,
-  remove,
-  batchRemove,
-  onSelectionChange
-} = useResourceCrud({
-  resource: 'user',
-  title: '用户',
-  perm: 'system:user:edit',
-  idKey: 'userId',
-  api: {
-    list: systemUserList,
-    get: systemUserGet,
-    create: systemUserCreate,
-    update: systemUserUpdate,
-    remove: systemUserDelete
-  },
-  defaultFilters: { username: '', status: '' },
-  defaultForm: { username: '', nickName: '', status: '0', password: '' },
-  // 编辑时密码留空则不提交该字段（后端视为不修改密码）
-  beforeSubmit(payload: Record<string, any>) {
-    if (isEdit.value && !payload.password) delete payload.password
-    return payload
+// ---------------- 列表 ----------------
+const list = ref<any[]>([])
+const loading = ref(false)
+const total = ref(0)
+const selection = ref<any[]>([])
+const showSearch = ref(true)
+
+const queryParams = reactive<Record<string, any>>({ username: '', status: '' })
+
+async function getList() {
+  loading.value = true
+  try {
+    const params: Record<string, any> = {}
+    Object.keys(queryParams).forEach((k) => {
+      const v = queryParams[k]
+      if (v !== '' && v !== undefined && v !== null) params[k] = v
+    })
+    const data = await systemUserList(params)
+    list.value = Array.isArray(data) ? data : []
+    total.value = list.value.length
+  } catch (e) {
+    console.error('[admin] 用户列表加载失败', e)
+    list.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
   }
-})
+}
+
+function handleQuery() {
+  getList()
+}
+
+function resetQuery() {
+  Object.keys(queryParams).forEach((k) => {
+    queryParams[k] = ''
+  })
+  getList()
+}
+
+function handleSelectionChange(rows: any[]) {
+  selection.value = rows
+}
+
+// ---------------- 弹窗表单 ----------------
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const saving = ref(false)
+const formRef = ref<any>(null)
+const editingId = ref<string | number | null>(null)
+const isEdit = computed(() => editingId.value !== null)
+
+const defaultForm = () => ({ username: '', nickName: '', status: '0', password: '' })
+const form = reactive(defaultForm())
 
 // 新增时密码必填；修改时留空表示不修改
 const rules = computed(() => ({
@@ -149,5 +221,177 @@ const rules = computed(() => ({
   password: isEdit.value ? [] : [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }))
 
-onMounted(query)
+function handleAdd() {
+  editingId.value = null
+  dialogTitle.value = '添加用户'
+  Object.assign(form, defaultForm())
+  dialogVisible.value = true
+}
+
+async function handleUpdate(row?: any) {
+  const target = row ?? selection.value[0]
+  if (!target) return
+  editingId.value = target.userId
+  dialogTitle.value = '修改用户'
+  Object.assign(form, defaultForm(), { username: target.username, nickName: target.nickName, status: target.status })
+  try {
+    const detail: any = await systemUserGet(target.userId)
+    if (detail) {
+      form.username = detail.username ?? form.username
+      form.nickName = detail.nickName ?? form.nickName
+      form.status = detail.status ?? form.status
+    }
+  } catch (e) {
+    console.error('[admin] 用户详情加载失败，使用行数据兜底', e)
+  }
+  // 后端不返回密码，编辑时始终留空
+  form.password = ''
+  dialogVisible.value = true
+}
+
+function cancel() {
+  dialogVisible.value = false
+}
+
+async function submitForm() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+  saving.value = true
+  try {
+    const payload: Record<string, any> = {
+      username: form.username,
+      nickName: form.nickName,
+      status: form.status
+    }
+    // 修改时密码留空表示不修改
+    if (form.password) payload.password = form.password
+    if (editingId.value !== null) {
+      await systemUserUpdate(editingId.value, payload)
+      ElMessage.success('修改成功')
+    } else {
+      await systemUserCreate(payload)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    getList()
+  } catch (e) {
+    console.error('[admin] 用户保存失败', e)
+  } finally {
+    saving.value = false
+  }
+}
+
+// ---------------- 删除 ----------------
+async function handleDelete(row?: any) {
+  const rows = row ? [row] : selection.value
+  if (!rows.length) return
+  const ok = await ElMessageBox.confirm(
+    row ? `确认删除用户「${row.nickName || row.username}」？` : `确认删除选中的 ${rows.length} 条数据？`,
+    '提示',
+    { type: 'warning' }
+  )
+    .then(() => true)
+    .catch(() => false)
+  if (!ok) return
+
+  const results = await Promise.allSettled(
+    rows.map((r: any) => systemUserDelete(r.userId))
+  )
+  const failed = results.filter((r) => r.status === 'rejected')
+  failed.forEach((r: any) => console.error('[admin] 用户删除失败', r.reason))
+  if (failed.length) {
+    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
+  } else {
+    ElMessage.success(`已删除 ${results.length} 条`)
+  }
+  getList()
+}
+
+onMounted(getList)
 </script>
+
+<style lang="less" scoped>
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 16px 16px 0;
+
+  .dark & {
+    background: #141414;
+    border-color: #2a2a2a;
+  }
+
+  :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+}
+
+.table-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+
+  .dark & {
+    background: #141414;
+    border-color: #2a2a2a;
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  flex-wrap: wrap;
+
+  .dark & {
+    border-color: #2a2a2a;
+  }
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-text {
+  margin-left: 4px;
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ebeef5;
+  border-radius: 50%;
+  background: transparent;
+  color: #5a5a5a;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #409eff;
+    border-color: #409eff;
+    background: #f5f7fa;
+  }
+}
+
+.w-full {
+  width: 100%;
+}
+</style>

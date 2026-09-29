@@ -1,7 +1,6 @@
 <!--
-  后台表单图片上传控件：调用后端 POST /api/admin/upload/image。
+  通用 CRUD 兜底页的图片上传控件：调用后端 POST /api/admin/upload/image。
   字段值统一为后端返回的相对 URL（如 /uploads/2026/09/26/uuid.jpg），不再手填。
-  由 crud/ImageUpload.vue 上移至 shared，供独立页与通用页共用。
 -->
 <template>
   <div class="image-upload">
