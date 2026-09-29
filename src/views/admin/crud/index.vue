@@ -190,7 +190,7 @@ import {
   adminResourceDelete
 } from '@/api/adminResource'
 import { SCHEMA_MAP } from './schema'
-import ImageUpload from './ImageUpload.vue'
+import ImageUpload from '../shared/ImageUpload.vue'
 import type { FieldSchema } from './types'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'

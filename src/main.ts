@@ -8,6 +8,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 import './index.css'
+import './views/admin/shared/ry-theme.less'
 
 const app = createApp(App)
 

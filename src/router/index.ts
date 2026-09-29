@@ -5,6 +5,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import type { MenuItem } from '@/api/auth'
+import { CONTENT_PAGES } from '@/config/adminPages'
 
 // 扩展路由元信息类型
 declare module 'vue-router' {
@@ -58,13 +59,13 @@ function buildDynamicRoutes(menus: MenuItem[]): RouteRecordRaw[] {
             meta: { requiresAuth: true, title: m.menuName, resource: res, perms: m.perms, icon: m.icon }
           })
         } else {
-          // 原有内容资源：通用 CRUD 页（保持既有实现不变）
+          // 内容资源：优先命中已拆分的独立页面，未登记的资源回退通用 CRUD 页
           const resource = resourceOf(m)
           if (resource) {
             routes.push({
               path: leafPath(m).replace(/^\/admin\//, ''),
               name: 'Admin_' + resource,
-              component: () => import('@/views/admin/crud/index.vue'),
+              component: CONTENT_PAGES[resource] ?? (() => import('@/views/admin/crud/index.vue')),
               meta: { requiresAuth: true, title: m.menuName, resource, perms: m.perms, icon: m.icon }
             })
           }

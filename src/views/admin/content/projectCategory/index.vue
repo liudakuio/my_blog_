@@ -1,4 +1,4 @@
-<!-- 用户管理（/api/system/user，主键 userId） -->
+<!-- 作品分类（专用接口 /api/admin/project_category，驼峰 VO） -->
 <template>
   <div class="ry-page">
     <RySearchBar
@@ -28,19 +28,20 @@
           :data="list"
           border
           stripe
-          row-key="userId"
+          row-key="id"
           @selection-change="onSelectionChange"
         >
           <el-table-column type="selection" width="50" align="center" />
-          <el-table-column prop="userId" label="ID" width="80" align="center" />
-          <el-table-column prop="username" label="用户名" min-width="160" show-overflow-tooltip />
-          <el-table-column prop="nickName" label="昵称" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="id" label="ID" width="70" align="center" />
+          <el-table-column prop="categoryValue" label="分类值" width="160" show-overflow-tooltip />
+          <el-table-column prop="labelZh" label="中文名" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="labelEn" label="英文名" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="sort" label="排序" width="80" align="center" />
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
               <RyStatusTag :value="row.status" />
             </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="180" show-overflow-tooltip />
           <el-table-column v-if="editable" label="操作" width="150" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" :icon="Edit" @click="openEdit(row)">修改</el-button>
@@ -52,25 +53,23 @@
     </div>
 
     <RyFormDialog v-model="dialogVisible" :title="dialogTitle" :saving="saving" @confirm="submit">
-      <el-form ref="formRef" :model="formData" label-width="90px" :rules="rules">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="formData.username" :disabled="isEdit" placeholder="登录用户名" />
+      <el-form ref="formRef" :model="formData" label-width="96px" :rules="rules">
+        <el-form-item label="分类值" prop="categoryValue">
+          <el-input v-model="formData.categoryValue" placeholder="如 interaction" />
         </el-form-item>
-        <el-form-item label="昵称" prop="nickName">
-          <el-input v-model="formData.nickName" placeholder="显示名称" />
+        <el-form-item label="中文名" prop="labelZh">
+          <el-input v-model="formData.labelZh" placeholder="中文展示名" />
+        </el-form-item>
+        <el-form-item label="英文名" prop="labelEn">
+          <el-input v-model="formData.labelEn" placeholder="English label" />
+        </el-form-item>
+        <el-form-item label="排序" prop="sort">
+          <el-input-number v-model="formData.sort" :controls="false" class="w-full" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="formData.status" class="w-full">
             <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input
-            v-model="formData.password"
-            type="password"
-            show-password
-            :placeholder="isEdit ? '留空表示不修改密码' : '必填，后端 BCrypt 加密'"
-          />
         </el-form-item>
       </el-form>
     </RyFormDialog>
@@ -78,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import RySearchBar from '../../shared/RySearchBar.vue'
 import RyToolbar from '../../shared/RyToolbar.vue'
@@ -86,20 +85,18 @@ import RyFormDialog from '../../shared/RyFormDialog.vue'
 import RyStatusTag from '../../shared/RyStatusTag.vue'
 import { useResourceCrud } from '../../shared/useResourceCrud'
 import { STATUS_OPTIONS, type RySearchField } from '../../shared/types'
-import {
-  systemUserList,
-  systemUserGet,
-  systemUserCreate,
-  systemUserUpdate,
-  systemUserDelete
-} from '@/api/system'
 
 const searchVisible = ref(true)
 
 const searchFields: RySearchField[] = [
-  { key: 'username', label: '用户名' },
+  { key: 'categoryValue', label: '分类值' },
+  { key: 'labelZh', label: '中文名' },
   { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS }
 ]
+
+const rules = {
+  categoryValue: [{ required: true, message: '分类值不能为空', trigger: 'blur' }]
+}
 
 const {
   list,
@@ -123,31 +120,17 @@ const {
   batchRemove,
   onSelectionChange
 } = useResourceCrud({
-  resource: 'user',
-  title: '用户',
-  perm: 'system:user:edit',
-  idKey: 'userId',
-  api: {
-    list: systemUserList,
-    get: systemUserGet,
-    create: systemUserCreate,
-    update: systemUserUpdate,
-    remove: systemUserDelete
-  },
-  defaultFilters: { username: '', status: '' },
-  defaultForm: { username: '', nickName: '', status: '0', password: '' },
-  // 编辑时密码留空则不提交该字段（后端视为不修改密码）
-  beforeSubmit(payload: Record<string, any>) {
-    if (isEdit.value && !payload.password) delete payload.password
-    return payload
+  resource: 'project_category',
+  title: '作品分类',
+  defaultFilters: { categoryValue: '', labelZh: '', status: '' },
+  defaultForm: {
+    categoryValue: '',
+    labelZh: '',
+    labelEn: '',
+    sort: 0,
+    status: '0'
   }
 })
-
-// 新增时密码必填；修改时留空表示不修改
-const rules = computed(() => ({
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: isEdit.value ? [] : [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}))
 
 onMounted(query)
 </script>
