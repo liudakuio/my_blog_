@@ -90,8 +90,8 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column prop="id" label="作品ID" width="140" show-overflow-tooltip />
         <el-table-column prop="category" label="分类" width="120" show-overflow-tooltip />
+        <el-table-column prop="categoryValue" label="分类中文名" width="140" show-overflow-tooltip />
         <el-table-column label="封面" width="90" align="center">
           <template #default="{ row }">
             <el-image
@@ -144,11 +144,6 @@
       <el-form ref="formRef" :model="form" label-width="96px" :rules="rules">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="作品ID" prop="id">
-              <el-input v-model="form.id" :disabled="isEdit" placeholder="唯一标识，如 p1" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="分类" prop="category">
               <el-select v-model="form.category" placeholder="请选择分类" filterable clearable class="w-full">
                 <el-option
@@ -198,27 +193,34 @@
                   <span>未上传</span>
                 </div>
                 <p v-if="uploadError" class="iu-error">{{ uploadError }}</p>
-                <el-upload
-                  :show-file-list="false"
-                  :accept="ACCEPT"
-                  :disabled="!canUpload"
-                  :before-upload="beforeUpload"
-                  :http-request="handleUpload"
-                >
-                  <el-button type="primary" size="small" :loading="uploading" :disabled="!canUpload">
-                    {{ form.cover ? '重新上传' : '上传图片' }}
+                <div class="iu-actions">
+                  <el-upload
+                    :show-file-list="false"
+                    :accept="ACCEPT"
+                    :disabled="!canUpload"
+                    :before-upload="beforeUpload"
+                    :http-request="handleUpload"
+                  >
+                    <el-button
+                      type="primary"
+                      size="small"
+                      :loading="uploading"
+                      :disabled="!canUpload"
+                    >
+                      {{ form.cover ? '重新上传' : '上传图片' }}
+                    </el-button>
+                  </el-upload>
+                  <el-button
+                    v-if="form.cover"
+                    size="small"
+                    type="danger"
+                    plain
+                    :disabled="!canUpload"
+                    @click="form.cover = ''"
+                  >
+                    移除
                   </el-button>
-                </el-upload>
-                <el-button
-                  v-if="form.cover"
-                  size="small"
-                  type="danger"
-                  plain
-                  :disabled="!canUpload"
-                  @click="form.cover = ''"
-                >
-                  移除
-                </el-button>
+                </div>
               </div>
             </el-form-item>
           </el-col>
@@ -363,7 +365,6 @@ const editingId = ref<string | number | null>(null)
 const isEdit = computed(() => editingId.value !== null)
 
 const defaultForm = () => ({
-  id: '',
   category: '',
   cover: '',
   icon: '',
@@ -646,5 +647,12 @@ onMounted(() => {
   margin: 0;
   color: #f56c6c;
   font-size: 12px;
+}
+
+// 上传 / 移除 按钮同一行
+.iu-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
