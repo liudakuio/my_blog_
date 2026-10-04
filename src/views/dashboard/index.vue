@@ -1,7 +1,7 @@
 <!--
   主页：Hero 大标题 + 联系信息 + 精选作品网格，点击分类标题可筛选作品
-  数据来源：Hero 文案与联系卡片为 src/data/home.ts 本地写死；精选作品为 src/data/projects.ts 的 FEATURED_PROJECTS。
-  注意：作品分类来自后端 /api/project-categories，而作品本身是写死数据，二者由 PortfolioGrid 组合。
+  数据来源：Hero 文案与联系卡片为 src/data/home.ts 本地写死；
+  作品列表走后端 /api/projects（按分类由后端筛选），分类字典走 /api/project-categories。
 -->
 <template>
   <div class="dashboard-page">
@@ -77,8 +77,8 @@
     </div>
 
     <!-- 作品网格：分类筛选 + 项目卡片，通过 externalFilter 控制初始筛选 -->
-    <!-- staticProjects：首页「精选作品」前端写死，不再请求 /api/projects；分类栏仍走接口 -->
-    <PortfolioGrid :external-filter="portfolioCategory" :static-projects="FEATURED_PROJECTS" />
+    <!-- 作品网格：数据走 /api/projects（后端按分类筛选），Hero 点击通过 externalFilter 切换分类 -->
+    <PortfolioGrid :external-filter="portfolioCategory" />
 
     <!-- Toast 提示：点击无分类的标题时显示"还在学..." -->
     <Teleport to="body">
@@ -97,8 +97,6 @@ import { useRouter } from 'vue-router'
 import { Location } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { HOME_DATA, CONTACT_DATA, type HeroItem } from '@/data/home'
-// 首页精选作品：前端写死的本地数据（不读接口）
-import { FEATURED_PROJECTS } from '@/data/projects'
 import { Category } from '@/types'
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 

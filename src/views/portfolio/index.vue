@@ -1,6 +1,7 @@
 <!--
   作品页：标题描述 + PortfolioGrid 作品网格（分类筛选、详情弹窗、灯箱）
-  数据来源：作品列表走 portfolioStore.loadProjects() -> /api/projects；页头文案为 src/data/portfolioPage.ts 写死。
+  数据来源：作品列表走 /api/projects（分类由后端筛选，切换分类时请求 ?category=xxx）；
+  页头文案为 src/data/portfolioPage.ts 写死。
   筛选：URL query ?filter=xxx 作为初始分类传入 PortfolioGrid，取值需与 /api/project-categories 的 value 一致。
 -->
 <template>

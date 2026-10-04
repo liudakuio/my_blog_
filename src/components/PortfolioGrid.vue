@@ -1,11 +1,12 @@
 <!--
   作品网格组件：分类筛选栏 + 项目卡片网格 + 详情弹窗 + 灯箱，供主页与作品页复用。
-  数据来源（两种，二选一）：
-    1) 接口：组件挂载时经 portfolioStore 拉取 /api/projects（作品页 /portfolio 走这条）；
-    2) 静态：父组件传入 staticProjects（首页「精选作品」前端写死，走这条，不发作品请求）。
-  注意：无论哪种来源，分类筛选栏始终来自 /api/project-categories（挂载时无条件请求）；
-  接口失败时分类为空，筛选栏只剩「全部」。
-  被谁引用：views/dashboard/index.vue（传 staticProjects）、views/portfolio/index.vue（走接口）。
+  数据来源：统一走接口 /api/projects，**筛选由后端完成** ——
+    切换分类时调 portfolioStore.setCategory(val) -> GET /api/projects?category=xxx，
+    列表只含该分类数据；「全部」不传 category，返回全量。
+    每次切换都会重新请求（不做缓存），前端不再本地过滤。
+  分类栏：始终来自 /api/project-categories（挂载时无条件请求），与列表数据来源解耦；
+    接口失败时分类为空，筛选栏只剩「全部」。
+  被谁引用：views/dashboard/index.vue（首页）、views/portfolio/index.vue（作品页）。
 -->
 <template>
   <div class="portfolio-grid">
@@ -198,21 +199,12 @@ import type { Project } from '@/types'
 import ProjectDetailModal from '@/views/portfolio/components/ProjectDetailModal.vue'
 
 const props = defineProps<{
-  // 外部筛选控制：主页 Hero 标题点击时传入分类名
+  // 外部筛选控制：主页 Hero 标题点击 / 作品页 URL ?filter= 传入的分类名
   externalFilter?: string
-  // 静态作品数据：传入则直接使用（首页「精选作品」前端写死），不再请求 /api/projects
-  staticProjects?: Project[]
 }>()
 
 const appStore = useAppStore()
 const portfolioStore = usePortfolioStore()
-
-// 组件挂载时拉取作品与分类（store 内部做了去重，主页与作品页共用同一份数据）
-// 传入 staticProjects 时跳过作品列表请求，分类字典仍从接口读取
-onMounted(() => {
-  if (!props.staticProjects) portfolioStore.loadProjects()
-  portfolioStore.loadCategories()
-})
 
 // 当前选中的分类筛选
 const filter = ref<string>('All')
@@ -227,15 +219,30 @@ const lightboxIndex = ref<number | null>(null)
 // 灯箱当前图片列表
 const currentGallery = ref<string[]>([])
 
-// 监听外部筛选变化（如主页 Hero 点击）
+// 监听外部筛选变化（主页 Hero 点击 / 作品页 URL ?filter=）
+// immediate：setup 阶段就写入 filter，使 onMounted 的请求带上外部传入的分类
 watch(() => props.externalFilter, (val) => {
   if (val) filter.value = val
 }, { immediate: true })
 
-// 全部项目数据：优先用传入的静态数据，否则取接口数据（/api/projects）
-const projectData = computed(() => props.staticProjects ?? portfolioStore.projects)
-// 是否正在加载（静态数据无需加载态）
-const loading = computed(() => (props.staticProjects ? false : portfolioStore.loading))
+// 分类切换 -> 重新请求接口（后端筛选，每次切换都请求）
+watch(filter, (val) => {
+  portfolioStore.setCategory(val)
+})
+
+// 组件挂载时拉取作品与分类。
+// 首页与作品页共用同一份 store 数据，故挂载时按当前 filter 请求一次，
+// 避免「在作品页切了分类再回首页，首页仍显示上一个分类数据」。
+// 分类字典独立请求，不受列表筛选影响。
+onMounted(() => {
+  portfolioStore.setCategory(filter.value)
+  portfolioStore.loadCategories()
+})
+
+// 全部项目数据：接口返回的作品列表（已按当前分类由后端筛选完成）
+const projectData = computed(() => portfolioStore.projects)
+// 是否正在加载：切分类重新请求时为 true，此时列表显示「作品加载中…」
+const loading = computed(() => portfolioStore.loading)
 
 // 可用分类：接口下发的分类字典 + 前端拼在首位的"全部"
 const categories = computed(() => [
@@ -257,12 +264,9 @@ const categoryLabels = computed(() => {
   return map
 })
 
-// 根据当前筛选分类过滤项目
-const filteredProjects = computed(() => {
-  const current = projectData.value
-  if (filter.value === 'All') return current
-  return current.filter(p => p.common.category === filter.value)
-})
+// 当前展示的项目：筛选已由后端完成（/api/projects?category=），
+// 故这里直接返回接口数据，前端不再重复过滤，避免语义混乱
+const filteredProjects = computed(() => projectData.value)
 
 // 获取项目的当前语言内容
 function projectContent(project: Project) {
