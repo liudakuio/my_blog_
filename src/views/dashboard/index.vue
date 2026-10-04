@@ -73,7 +73,8 @@
     </div>
 
     <!-- 作品网格：分类筛选 + 项目卡片，通过 externalFilter 控制初始筛选 -->
-    <PortfolioGrid :external-filter="portfolioCategory" />
+    <!-- staticProjects：首页「精选作品」前端写死，不再请求 /api/projects；分类栏仍走接口 -->
+    <PortfolioGrid :external-filter="portfolioCategory" :static-projects="FEATURED_PROJECTS" />
 
     <!-- Toast 提示：点击无分类的标题时显示"还在学..." -->
     <Teleport to="body">
@@ -92,6 +93,8 @@ import { useRouter } from 'vue-router'
 import { Location } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { HOME_DATA, CONTACT_DATA, type HeroItem } from '@/data/home'
+// 首页精选作品：前端写死的本地数据（不读接口）
+import { FEATURED_PROJECTS } from '@/data/projects'
 import { Category } from '@/types'
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 

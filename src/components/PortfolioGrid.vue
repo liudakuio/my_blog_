@@ -192,14 +192,17 @@ import ProjectDetailModal from '@/views/portfolio/components/ProjectDetailModal.
 const props = defineProps<{
   // 外部筛选控制：主页 Hero 标题点击时传入分类名
   externalFilter?: string
+  // 静态作品数据：传入则直接使用（首页「精选作品」前端写死），不再请求 /api/projects
+  staticProjects?: Project[]
 }>()
 
 const appStore = useAppStore()
 const portfolioStore = usePortfolioStore()
 
 // 组件挂载时拉取作品与分类（store 内部做了去重，主页与作品页共用同一份数据）
+// 传入 staticProjects 时跳过作品列表请求，分类字典仍从接口读取
 onMounted(() => {
-  portfolioStore.loadProjects()
+  if (!props.staticProjects) portfolioStore.loadProjects()
   portfolioStore.loadCategories()
 })
 
@@ -221,10 +224,10 @@ watch(() => props.externalFilter, (val) => {
   if (val) filter.value = val
 }, { immediate: true })
 
-// 全部项目数据（来自 /api/projects）
-const projectData = computed(() => portfolioStore.projects)
-// 是否正在加载
-const loading = computed(() => portfolioStore.loading)
+// 全部项目数据：优先用传入的静态数据，否则取接口数据（/api/projects）
+const projectData = computed(() => props.staticProjects ?? portfolioStore.projects)
+// 是否正在加载（静态数据无需加载态）
+const loading = computed(() => (props.staticProjects ? false : portfolioStore.loading))
 
 // 可用分类：接口下发的分类字典 + 前端拼在首位的"全部"
 const categories = computed(() => [
