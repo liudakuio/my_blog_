@@ -1,6 +1,8 @@
 // 后台通用 CRUD 接口：覆盖 21 张业务表。
 // 路径约定：/api/admin/{resource}；变更操作需 blog:{resource}:edit 权限。
 // 列表为全量返回（非分页），可按列等值筛选。
+// 被谁引用：views/admin/crud/index.vue（通用 CRUD 页）按 route.meta.resource 调用；
+// 走「专用接口」的 6 个资源见 adminResource.ts，二者路径相同、出入参命名不同（下划线 vs 驼峰）。
 import service from '@/utils/request'
 
 /** GET /api/admin/{resource}?col=val —— 列表（按列等值筛选 + 默认排序） */

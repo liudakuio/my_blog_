@@ -1,4 +1,7 @@
-<!-- 面包屑：根据路由 matched 生成 -->
+<!--
+  面包屑：根据路由 matched 生成
+  数据来源：vue-router 的 route.matched，取各层 meta.title 生成，无 title 的层级会被跳过。
+-->
 <template>
   <el-breadcrumb separator="/" class="admin-breadcrumb">
     <el-breadcrumb-item :to="{ path: '/admin/dashboard' }">控制台</el-breadcrumb-item>

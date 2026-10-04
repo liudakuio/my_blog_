@@ -1,6 +1,9 @@
 // 系统管理接口：用户 / 角色 / 菜单。
 // 路径约定：/api/system/{resource}；写操作需 system:{resource}:edit 权限。
 // 注意三者主键名不同：userId / roleId / menuId。
+// 被谁引用：views/admin/system/ 下的 user / role / menu 三个页面。
+// 类型保留说明：页面侧目前统一用 any，未 import 这些 VO；
+// 保留它们是未来做类型收窄的锚点，且函数签名已用其约束出入参。
 import service from '@/utils/request'
 
 // ---------------- 用户 ----------------

@@ -1,6 +1,14 @@
 // 路由配置：
 // - 公开站点路由（原博客展示页）保持不变
 // - 新增 /admin/login（公开）与 /admin 后台框架（需登录，动态菜单）
+//
+// 后台路由不是写死的：登录后由 /api/auth/menus 返回的菜单树动态生成，见 buildDynamicRoutes。
+// 页面归属规则（改菜单前必读）：
+//   权限前缀 system: -> SYSTEM_PAGES（user / menu / role），未登记的落到 Placeholder.vue
+//   权限前缀 blog:   -> CONTENT_PAGES（config/adminPages.ts 的 19 个页面），
+//                       未登记的资源回退通用 CRUD 页 views/admin/crud/index.vue
+// 因此 views/admin/content/ 与 system/ 下的页面文件都不会被静态 import，
+// 静态分析时切勿当作孤儿文件删除。
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/store/user'
@@ -81,11 +89,6 @@ function buildDynamicRoutes(menus: MenuItem[]): RouteRecordRaw[] {
 // 标记动态路由是否已注入，避免重复 addRoute
 let dynamicRoutesReady = false
 
-// 重置路由注入状态（退出登录后下次进入重新拉取菜单并注入）
-export function resetRouteState() {
-  dynamicRoutesReady = false
-}
-
 // ---------------- 公开站点路由（保持不变） ----------------
 const publicRoutes: RouteRecordRaw[] = [
   {
@@ -106,8 +109,7 @@ const publicRoutes: RouteRecordRaw[] = [
 const adminLoginRoute: RouteRecordRaw = {
   path: '/admin/login',
   name: 'AdminLogin',
-  component: () => import('@/views/admin/login/index.vue'),
-  meta: { public: true }
+  component: () => import('@/views/admin/login/index.vue')
 }
 
 const adminLayoutRoute: RouteRecordRaw = {
@@ -138,6 +140,8 @@ const router = createRouter({
 })
 
 // ---------------- 全局导航守卫 ----------------
+// 职责：登录拦截 + 首次进入后台时拉取用户信息与菜单并注入动态路由。
+// 失败兜底：拉取用户信息/菜单异常时 reset() 登录态并跳登录页，避免带着半截状态进后台。
 router.beforeEach(async (to) => {
   const userStore = useUserStore()
 

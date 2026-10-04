@@ -1,4 +1,7 @@
-<!-- 用户下拉：头像 + 用户名 + 个人中心 / 退出登录 -->
+<!--
+  用户下拉：头像 + 用户名 + 个人中心 / 退出登录
+  行为：「个人中心」跳 /admin/profile；「退出登录」调 userStore.logout()（清 token 后跳登录页）。
+-->
 <template>
   <el-dropdown trigger="click" @command="handleCommand">
     <div class="user-trigger">

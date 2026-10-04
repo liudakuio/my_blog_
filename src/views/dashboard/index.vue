@@ -1,4 +1,8 @@
-<!-- 主页：Hero 大标题 + 联系信息 + 精选作品网格，点击分类标题可筛选作品 -->
+<!--
+  主页：Hero 大标题 + 联系信息 + 精选作品网格，点击分类标题可筛选作品
+  数据来源：Hero 文案与联系卡片为 src/data/home.ts 本地写死；精选作品为 src/data/projects.ts 的 FEATURED_PROJECTS。
+  注意：作品分类来自后端 /api/project-categories，而作品本身是写死数据，二者由 PortfolioGrid 组合。
+-->
 <template>
   <div class="dashboard-page">
     <!-- Hero 区域：左侧大标题 + 个人简介，右侧联系信息 -->

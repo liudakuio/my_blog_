@@ -1,4 +1,8 @@
-<!-- 顶部导航栏：Logo、页面导航、主题切换，滚动时自动变为胶囊样式 -->
+<!--
+  顶部导航栏：Logo、页面导航、主题切换，滚动时自动变为胶囊样式
+  数据来源：导航项来自 siteStore.navItems(language)（/api/site/config 的 nav，按 sort 排序、按当前语言解析文案）。
+  注意：接口失败时导航为空，接口恢复后需刷新页面重新拉取（loadConfig 只成功一次即缓存）。
+-->
 <template>
   <div class="navbar-wrapper">
     <!-- 导航栏主体：滚动后变为胶囊毛玻璃样式，未滚动时全宽透明 -->

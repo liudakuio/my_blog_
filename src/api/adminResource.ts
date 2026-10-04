@@ -2,6 +2,10 @@
 // 路径与通用 CRUD 一致（/api/admin/{resource}），差异只在出入参：
 //   专用接口 -> 驼峰；通用 CRUD -> 下划线列名。
 // 详见《前端改造方案》第二、四节。
+// 被谁引用：views/admin/content/ 下对应的专用页面（siteText / project / projectCategory /
+// article / articleCategory / educationText），以及 crud/index.vue 中 isDedicatedResource 为真时的分支。
+// 维护注意：DEDICATED_RESOURCES 的取值必须与 adminTypes.ts 的 AdminVoMap key 完全一致，
+// 否则 isDedicatedResource 的类型守卫会与实际返回类型脱节。
 import service from '@/utils/request'
 import type { AdminVoMap } from './adminTypes'
 

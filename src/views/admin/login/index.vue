@@ -1,4 +1,9 @@
-<!-- 登录页：居中卡片 + 账号密码，博客极简黑白风格 -->
+<!--
+  登录页：居中卡片 + 账号密码，博客极简黑白风格
+  数据来源：提交用户名密码调用 userStore.login() -> POST /api/auth/login，成功后写入 localStorage 的 token。
+  跳转：登录成功进 /admin，由 router.beforeEach 负责拉取用户信息与菜单并注入动态路由。
+  注意：该路由无需登录即可访问（守卫中对 /admin/login 单独放行）。
+-->
 <template>
   <div class="login-page">
     <div class="login-card">

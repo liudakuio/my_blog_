@@ -1,4 +1,6 @@
-// 作品页标题和描述（中英双语）
+// 作品页标题和描述（中英双语，本地写死）
+// 被谁引用：views/portfolio/index.vue 的页头。
+// 注意：只有页头文案是写死的，作品列表本身来自后端 /api/projects。
 import type { Language } from '@/types'
 
 export interface PortfolioPageContent {

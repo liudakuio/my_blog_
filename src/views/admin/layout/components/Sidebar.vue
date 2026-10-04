@@ -1,4 +1,9 @@
-<!-- 侧边栏：可折叠，由后端动态菜单渲染 -->
+<!--
+  侧边栏：可折叠，由后端动态菜单渲染
+  数据来源：userStore.menus 菜单树；只渲染 status === "0"（正常）的菜单。
+  图标：后端存的是旧 Element UI 命名（el-icon-xxx），由 config/menu.ts 的 resolveIcon 映射为组件名。
+  路由：由 config/menu.ts 的 menuRoutePath 推导（blog/siteText -> /admin/siteText）。
+-->
 <template>
   <aside class="admin-sidebar" :class="{ collapsed }">
     <!-- 品牌区 -->

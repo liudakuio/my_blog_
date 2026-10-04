@@ -1,5 +1,8 @@
 // 后端返回对象（VO）类型定义
 // 多语字段规则：lang=zh/en 时平铺为 string / string[]；lang=all（默认）时收进 { zh, en }
+// 被谁引用：src/api 下各接口模块（作 service.get/post 的泛型）、src/store（归一化函数入参）。
+// 取值约定：业务层统一用 utils/i18n.ts 的 pickText 解析 I18nText，不要直接读 .zh / .en，
+// 因为单语模式下字段是平铺的字符串。
 
 import type { Language } from '@/types'
 
@@ -84,39 +87,6 @@ export interface SongVo {
   artist: string
   cover: string
   audio: string
-}
-
-export interface ExperienceVo {
-  id: string
-  year: string
-  title: I18nText
-  institution: I18nText
-  description: I18nText
-  type: string
-}
-
-export interface CompetitionVo {
-  level: I18nText
-  awards: I18nText[]
-}
-
-export interface HonorsVo {
-  scholarships: I18nText[]
-  titles: I18nText[]
-  competitions: CompetitionVo[]
-}
-
-export interface EducationVo {
-  title: I18nText
-  about: I18nText
-  openToWork: I18nText
-  viewHonorsLabel: I18nText
-  honorsTitle: I18nText
-  competitionsTitle: I18nText
-  scholarshipsLabel: I18nText
-  titlesLabel: I18nText
-  experiences: ExperienceVo[]
-  honors: HonorsVo
 }
 
 /** 接口通用的语言参数 */

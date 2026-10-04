@@ -1,4 +1,10 @@
-<!-- 通用 CRUD 视图：由路由 meta.resource + schema 驱动 -->
+<!--
+  通用 CRUD 视图：由路由 meta.resource + schema 驱动
+  通用 CRUD 页：由 route.meta.resource 决定操作哪个资源，字段配置取自同目录 schema.ts 的 SCHEMA_MAP。
+  数据来源：isDedicatedResource(resource) 为真走 @/api/adminResource（驼峰字段），否则走 @/api/admin（下划线字段）。
+  权限：editable = userStore.canEdit(resource)，即 blog:{resource}:edit。
+  注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走本页；已拆分独立页面的资源不读这里的配置。
+-->
 <template>
   <div class="crud">
     <!-- 页头 -->
@@ -177,7 +183,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
-import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
 import { adminList, adminGet, adminCreate, adminUpdate, adminDelete } from '@/api/admin'
@@ -197,7 +202,6 @@ import 'md-editor-v3/lib/style.css'
 
 const route = useRoute()
 const userStore = useUserStore()
-const { permissions } = storeToRefs(userStore)
 
 const resource = computed(() => (route.meta.resource as string) || '')
 const schema = computed(() => SCHEMA_MAP[resource.value])

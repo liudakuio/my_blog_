@@ -1,5 +1,8 @@
 // 站点全局数据：导航菜单（/api/site/config 目前仅返回 nav；
 // 首页/联系/页脚/内页标题等文案已回退为 src/data 下的本地数据）
+// 被谁引用：App.vue 启动时调用 loadConfig()；layout/components/SidebarNav.vue
+// 通过 navItems(lang) 渲染侧边导航（按 sort 升序、按当前语言解析文案）。
+// 降级行为：接口失败时 config 保持 null，SidebarNav 拿不到导航时按空数组渲染。
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getSiteConfig } from '@/api'

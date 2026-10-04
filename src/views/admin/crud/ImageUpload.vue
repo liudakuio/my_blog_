@@ -1,6 +1,8 @@
 <!--
   通用 CRUD 兜底页的图片上传控件：调用后端 POST /api/admin/upload/image。
   字段值统一为后端返回的相对 URL（如 /uploads/2026/09/26/uuid.jpg），不再手填。
+  数据来源：调 adminUploadImage -> POST /api/admin/upload/image，返回可直接访问的相对 URL（如 /uploads/xxx.jpg）。
+  限制：仅 jpg/jpeg/png/gif/webp，单文件不超过 5MB；需 blog:upload:edit 权限。
 -->
 <template>
   <div class="image-upload">

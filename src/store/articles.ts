@@ -1,4 +1,7 @@
 // 文章数据：文章列表（分页）+ 文章分类字典
+// 被谁引用：views/articles/index.vue（列表、分类、排序、加载更多）
+// 与 views/articles/detail.vue（详情直接从 articles 中按 id 查找，不单独请求详情接口）。
+// 分页语义：articles 为已加载的累计列表；append=true 时追加，否则替换。
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getArticlePage, getArticleCategories } from '@/api'

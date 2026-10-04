@@ -1,4 +1,8 @@
-<!-- 项目详情弹窗：展示项目完整信息、图片画廊、外部链接，支持灯箱查看大图 -->
+<!--
+  项目详情弹窗：展示项目完整信息、图片画廊、外部链接，支持灯箱查看大图
+  引用关系：由 components/PortfolioGrid.vue 渲染，接收 project 并派发 close / lightbox 事件。
+  数据来源：作品对象由父组件传入（列表数据或补拉详情后的数据），本组件自身不发请求。
+-->
 <template>
   <Teleport to="body">
     <div class="modal-overlay" :class="visible ? 'animate-fadeIn' : ''" @click="$emit('close')">

@@ -1,4 +1,9 @@
-<!-- 音乐播放器：浮动在右下角，支持播放/暂停、上下曲、进度拖拽、音量控制、淡入淡出 -->
+<!--
+  音乐播放器：浮动在右下角，支持播放/暂停、上下曲、进度拖拽、音量控制、淡入淡出
+  数据来源：歌单来自 src/data/music.ts 的 MUSIC_PLAYLIST（本地写死），音频与封面放在 public/music 下。
+  引用关系：由 src/layout/index.vue 挂载，浮动在页面右下角。
+  注意：浏览器通常会拦截自动播放，播放失败时静默降级，需用户手动点击播放。
+-->
 <template>
   <!-- 外层容器：pointer-events-none 避免遮挡页面点击 -->
   <div class="music-player">

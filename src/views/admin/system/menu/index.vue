@@ -1,6 +1,9 @@
 <!--
   菜单管理（/api/system/menu，主键 menuId；支持平铺 / 树形切换）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  数据来源：@/api/system 的 systemMenuList / Get / Create / Update / Delete。
+  引用关系：由 router/index.ts 的 SYSTEM_PAGES 注册（权限前缀 system: 的菜单）。
+  注意：主键为 menuId；菜单改动影响后台动态路由与侧边栏，需重新登录生效。
 -->
 <template>
   <div class="app-container">
@@ -277,7 +280,6 @@ const dialogTitle = ref('')
 const saving = ref(false)
 const formRef = ref<any>(null)
 const editingId = ref<string | number | null>(null)
-const isEdit = computed(() => editingId.value !== null)
 
 const defaultForm = () => ({
   parentId: 0,

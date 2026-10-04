@@ -1,6 +1,9 @@
 <!--
   用户管理（/api/system/user，主键 userId）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  数据来源：@/api/system 的 systemUserList / Get / Create / Update / Delete。
+  引用关系：由 router/index.ts 的 SYSTEM_PAGES 注册（权限前缀 system: 的菜单）。
+  注意：主键为 userId；修改时 password 留空表示不修改密码；内置 admin 不可删除。
 -->
 <template>
   <div class="app-container">

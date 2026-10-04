@@ -1,4 +1,7 @@
-<!-- 侧边栏菜单项（递归渲染目录/菜单） -->
+<!--
+  侧边栏菜单项（递归渲染目录/菜单）
+  递归组件：menuType 为 M（目录）时渲染成可展开子菜单，为 C（菜单）时渲染成可跳转项，叶子才生成路由。
+-->
 <template>
   <!-- 目录：含可见子节点 -> 折叠子菜单 -->
   <el-sub-menu v-if="hasVisibleChildren" :index="String(item.menuId)">

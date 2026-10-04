@@ -1,4 +1,10 @@
 ﻿// 应用开发类项目数据（Development）
+// 被谁引用：src/data/projects.ts 的 FEATURED_PROJECTS，最终由首页「精选作品」渲染。
+// 这是首页唯一在用的写死数据集；作品页 /portfolio 走后端 /api/projects，与本文件无关。
+// 字段说明：
+//   common.icon 决定卡片图标（message-circle / id-card / file-text / film，未命中兜底为 Monitor）
+//   common.image 留空时会走卡片占位态（显示标题 + "预览部署中"）
+//   zh / en 分别对应中英文案，由 appStore.language 选择
 import { Project } from '@/types'
 
 export const DEV_DATA: Project[] = [

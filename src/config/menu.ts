@@ -1,5 +1,7 @@
 // 菜单辅助：后端图标（旧 Element UI 命名 el-icon-xxx）映射到 Element Plus 全局图标组件名；
 // 以及由菜单 component 推导前端路由路径。
+// 被谁引用：views/admin/layout/components/Sidebar.vue / SidebarItem.vue（渲染后端菜单树）。
+// 约定：后端菜单的 component 形如 blog/siteText，去掉 blog/ 前缀即为 /admin 下的路由路径。
 import type { MenuItem } from '@/api/auth'
 
 // 后端图标名 -> Element Plus 全局组件名（main.ts 已全局注册所有图标）

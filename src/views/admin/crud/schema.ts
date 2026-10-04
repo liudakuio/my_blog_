@@ -1,5 +1,9 @@
 // 21 个后台资源的字段配置：驱动通用 CRUD 的表格列与表单控件。
 // 字段类型：text / textarea / number / select / image / link / datetime
+// 被谁引用：crud/index.vue 通过下面的 SCHEMA_MAP[route.meta.resource] 取配置渲染页面。
+// 注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走通用 CRUD 页，
+// 已拆分独立页面的资源（如 project / article）不读这里的配置，改字段要改对应页面。
+// 字段的 key 必须与后端列名一致（通用接口用下划线，专用接口用驼峰）。
 import type { FieldSchema, ResourceSchema } from './types'
 
 // 字段构造器（默认表格与表单均展示）
@@ -19,11 +23,6 @@ const LANG = [
   { label: '中文', value: 'zh' },
   { label: '英文', value: 'en' }
 ]
-const YESNO = [
-  { label: '是', value: '1' },
-  { label: '否', value: '0' }
-]
-
 // 自动主键（自增）资源：id 不在表单
 const autoId = () => f('id', 'ID', 'text', { form: false, width: 70 })
 

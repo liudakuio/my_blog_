@@ -1,4 +1,12 @@
-<!-- 作品网格组件：分类筛选栏 + 项目卡片网格 + 详情弹窗 + 灯箱，供主页和作品页复用 -->
+<!--
+  作品网格组件：分类筛选栏 + 项目卡片网格 + 详情弹窗 + 灯箱，供主页与作品页复用。
+  数据来源（两种，二选一）：
+    1) 接口：组件挂载时经 portfolioStore 拉取 /api/projects（作品页 /portfolio 走这条）；
+    2) 静态：父组件传入 staticProjects（首页「精选作品」前端写死，走这条，不发作品请求）。
+  注意：无论哪种来源，分类筛选栏始终来自 /api/project-categories（挂载时无条件请求）；
+  接口失败时分类为空，筛选栏只剩「全部」。
+  被谁引用：views/dashboard/index.vue（传 staticProjects）、views/portfolio/index.vue（走接口）。
+-->
 <template>
   <div class="portfolio-grid">
     <!-- 分类筛选栏：sticky 吸顶，当前选中项加下划线高亮 -->

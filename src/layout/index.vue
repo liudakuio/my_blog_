@@ -1,4 +1,8 @@
-<!-- 主布局：包含导航栏、音乐播放器、页面路由视图、页脚 -->
+<!--
+  主布局：包含导航栏、音乐播放器、页面路由视图、页脚
+  组成：MusicPlayer（左下角播放器）+ SidebarNav（顶部导航）+ <router-view>（带切换过渡）+ 页脚。
+  引用关系：由 router 的公开路由 "/" 作为父布局加载，套在 dashboard / portfolio / articles / contact 之外。
+-->
 <template>
   <!-- 全局容器：深色/浅色主题切换、文字选中颜色、禁止横向滚动 -->
   <div class="app-root">

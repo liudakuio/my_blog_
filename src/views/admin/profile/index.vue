@@ -1,4 +1,7 @@
-<!-- 个人中心：账号信息 + 权限 + 退出登录 -->
+<!--
+  个人中心：账号信息 + 权限 + 退出登录
+  数据来源：userStore 的 userInfo（/api/auth/info）与 permissions（权限集合，形如 blog:project:edit）。
+-->
 <template>
   <div class="profile">
     <section class="card account">

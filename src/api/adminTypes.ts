@@ -1,6 +1,9 @@
 // 后台 7 个「专用接口」资源的类型化 VO（字段驼峰）。
 // 字段与约束详见《后台专用接口说明》第二节。
 // 通用 CRUD 资源返回下划线列名，不走这里的类型。
+// 保留说明：这 6 个 VO 目前仅被 AdminVoMap 引用（页面侧统一 as any），
+// 但它们是 adminResourceList/Get/Create/Update 的返回类型推导锚点，
+// 后续若要给后台页面补齐类型，直接 import 这里即可，故不删除。
 
 /** 站点全局配置（KV 文案） */
 export interface AdminSiteTextVo {

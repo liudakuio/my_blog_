@@ -1,4 +1,7 @@
 // 用户状态管理：token / 用户信息 / 权限 / 动态菜单，登录态持久化到 localStorage。
+// 被谁引用：views/admin/login（登录）、admin/layout/components/Sidebar（menus 生成菜单）、
+// views/admin/crud 与 content 各页（canEdit / hasPerm 判断按钮权限）、
+// router/index.ts 的 beforeEach（未登录拦截）与动态路由注入（menus）。
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { login as loginApi, getInfo, getMenus, logout as logoutApi, type UserInfo, type MenuItem } from '@/api/auth'

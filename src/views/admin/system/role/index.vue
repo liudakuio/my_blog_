@@ -1,6 +1,9 @@
 <!--
   角色管理（/api/system/role，主键 roleId；含菜单分配 menuIds）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  数据来源：@/api/system 的 systemRoleList / Get / Create / Update / Delete。
+  引用关系：由 router/index.ts 的 SYSTEM_PAGES 注册（权限前缀 system: 的菜单）。
+  注意：主键为 roleId；menuIds 用于绑定该角色可访问的菜单，为空表示不调整绑定。
 -->
 <template>
   <div class="app-container">
@@ -238,7 +241,6 @@ const dialogTitle = ref('')
 const saving = ref(false)
 const formRef = ref<any>(null)
 const editingId = ref<string | number | null>(null)
-const isEdit = computed(() => editingId.value !== null)
 
 const defaultForm = () => ({ roleKey: '', roleName: '', status: '0' })
 const form = reactive(defaultForm())

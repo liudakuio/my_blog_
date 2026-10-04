@@ -1,6 +1,13 @@
 <!--
   文章多语（/api/admin/article_i18n，通用接口下划线字段）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  数据来源：@/api/admin 的 adminList / adminGet / adminCreate / adminUpdate /
+    adminDelete（通用接口，字段名与后端列名一致，下划线命名）
+  引用关系：本文件不被任何模块静态 import，而是由 src/config/adminPages.ts 的 CONTENT_PAGES
+    依据后端菜单 perms 推导出的 resource 名动态匹配后，经 router 的 lazy import 加载；
+    请勿因「无静态 import」误判为孤儿文件而删除。
+  编辑权限：editable = userStore.canEdit('article_i18n')，即需 blog:article_i18n:edit 权限。
+  字段约定：表单字段与后端 article_i18n 表列名一一对应。
 -->
 <template>
   <div class="app-container">
@@ -173,7 +180,6 @@ const loading = ref(false)
 const total = ref(0)
 const selection = ref<any[]>([])
 const showSearch = ref(true)
-const advanced = ref(false)
 
 const queryParams = reactive<Record<string, any>>({
   article_id: '',
@@ -181,6 +187,11 @@ const queryParams = reactive<Record<string, any>>({
   title: ''
 })
 
+/**
+ * 拉取 article_i18n 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
+ * 后端为全量返回（非分页），故 total 直接取列表长度。
+ * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
+ */
 async function getList() {
   loading.value = true
   try {
@@ -201,10 +212,12 @@ async function getList() {
   }
 }
 
+/** 按当前查询条件重新拉取列表（搜索按钮 / 输入框回车触发） */
 function handleQuery() {
   getList()
 }
 
+/** 清空全部查询条件后重新拉取列表 */
 function resetQuery() {
   Object.keys(queryParams).forEach((k) => {
     queryParams[k] = ''
@@ -212,6 +225,7 @@ function resetQuery() {
   getList()
 }
 
+/** 记录表格多选结果，供批量修改 / 批量删除使用 */
 function handleSelectionChange(rows: any[]) {
   selection.value = rows
 }
@@ -222,7 +236,6 @@ const dialogTitle = ref('')
 const saving = ref(false)
 const formRef = ref<any>(null)
 const editingId = ref<string | number | null>(null)
-const isEdit = computed(() => editingId.value !== null)
 
 const defaultForm = () => ({
     article_id: '',
@@ -235,6 +248,7 @@ const rules = {
   article_id: [{ required: true, message: '文章ID不能为空', trigger: 'blur' }]
 }
 
+/** 打开新增弹窗：editingId 置空表示新增，表单回填默认值 */
 function handleAdd() {
   editingId.value = null
   dialogTitle.value = '添加文章多语'
@@ -242,6 +256,11 @@ function handleAdd() {
   dialogVisible.value = true
 }
 
+/**
+ * 打开修改弹窗：优先使用传入行，未传则取表格选中的第一条。
+ * 先用行数据填充表单，再拉详情覆盖（保证字段为最新）；
+ * 详情请求失败不阻塞，仅打印日志并沿用行数据兜底。
+ */
 async function handleUpdate(row?: any) {
   const target = row ?? selection.value[0]
   if (!target) return
@@ -257,10 +276,16 @@ async function handleUpdate(row?: any) {
   dialogVisible.value = true
 }
 
+/** 关闭弹窗，不保存任何修改 */
 function cancel() {
   dialogVisible.value = false
 }
 
+/**
+ * 提交表单：先做表单校验，校验失败直接返回；
+ * 再按 editingId 是否为空区分「修改」与「新增」；
+ * 成功后关闭弹窗并刷新列表。
+ */
 async function submitForm() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
@@ -287,6 +312,10 @@ async function submitForm() {
 }
 
 // ---------------- 删除 ----------------
+/**
+ * 删除：传入行时删该行，否则批量删除选中行；
+ * 先弹二次确认（用户取消则直接返回），再用 Promise.allSettled 并发删除并统计成功 / 失败条数。
+ */
 async function handleDelete(row?: any) {
   const rows = row ? [row] : selection.value
   if (!rows.length) return
@@ -394,14 +423,6 @@ onMounted(getList)
     border-color: #409eff;
     background: #f5f7fa;
   }
-}
-
-.thumb {
-  width: 56px;
-  height: 40px;
-  border-radius: 3px;
-  display: block;
-  background: #f5f7fa;
 }
 
 .w-full {

@@ -1,4 +1,8 @@
-<!-- 系统管理占位页：后端暂未提供接口与数据表的功能（部门 / 岗位 / 日志） -->
+<!--
+  系统管理占位页：后端暂未提供接口与数据表的功能（部门 / 岗位 / 日志）
+  占位页：后端菜单里有、但前端尚未实现页面的系统资源（如 dept / post / log）会落到这里。
+  引用关系：router/index.ts 中 SYSTEM_PAGES 未命中时的兜底组件。
+-->
 <template>
   <div class="sys-placeholder">
     <div class="ph-card">

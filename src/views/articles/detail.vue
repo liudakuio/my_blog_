@@ -1,4 +1,8 @@
-<!-- 文章详情页：按 id 从 store 取文章，渲染封面 + 标题 + 正文 + 配图，支持中英文 -->
+<!--
+  文章详情页：按 id 从 store 取文章，渲染封面 + 标题 + 正文 + 配图，支持中英文
+  数据来源：直接从 articleStore.articles 中按路由 id 查找，不单独请求详情接口。
+  注意：直接访问或刷新时列表可能尚未加载，故会先触发 loadArticles()，期间显示加载态；找不到时显示未找到。
+-->
 <template>
   <div class="article-detail">
     <button class="back-btn" @click="goBack">

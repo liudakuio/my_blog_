@@ -1,4 +1,6 @@
 // 认证相关接口：登录 / 用户信息 / 菜单树 / 登出
+// 被 store/user.ts 调用（登录、拉取信息与菜单、登出），后台路由注入依赖这里返回的菜单树
+// 登录用 requestRaw（拿未拆包的原始响应），其余走 service（自动取 data 并按业务码校验）
 import service, { requestRaw } from '@/utils/request'
 
 /** 后端 SysMenu（菜单树节点，含 children） */

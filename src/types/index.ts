@@ -1,4 +1,11 @@
 // 全局类型定义：语言、分类枚举、项目/文章/歌曲等数据结构
+// 使用约定：
+//   1) 接口返回对象（VO）类型在 src/api/types.ts，这里只放前端内部使用的结构；
+//   2) 页面文案类结构（SocialLinks / ContactContent / PortfolioPageContent /
+//      ArticlesPageContent / Song）在 src/data/ 下各自定义并导出，此处保留同名声明仅为兼容旧引用，
+//      实际以 src/data 下的定义为准，改动时请改 src/data；
+//   3) Category 枚举的取值需与后端 /api/project-categories 下发的 value 保持一致，
+//      否则首页 Hero 点击筛选时会命中不到分类。
 export type Language = 'zh' | 'en'
 
 export enum Category {
@@ -65,39 +72,6 @@ export interface ContactContent {
 export interface NavItem {
   id: string
   label: string
-}
-
-export interface Experience {
-  id: string
-  year: string
-  title: string
-  institution: string
-  description: string
-  type: 'education' | 'work'
-}
-
-export interface HonorsData {
-  scholarships: string[]
-  titles: string[]
-  competitions: CompetitionGroup[]
-}
-
-export interface CompetitionGroup {
-  level: string
-  awards: string[]
-}
-
-export interface EducationPageContent {
-  title: string
-  about: string
-  openToWork: string
-  viewHonorsLabel: string
-  honorsTitle: string
-  competitionsTitle: string
-  scholarshipsLabel: string
-  titlesLabel: string
-  experiences: Experience[]
-  honors: HonorsData
 }
 
 export interface Project {

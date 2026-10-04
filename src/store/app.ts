@@ -1,4 +1,8 @@
 // 全局状态管理：语言、主题（深色/浅色自动切换）、当前页签
+// 被谁引用：全站（navbar 的语言/主题按钮、各页面的 language 文案选择、layout 的页签高亮）。
+// 主题策略差异：访客端 main.ts 调 initTheme()（18:30~06:00 自动深色）；
+// 后台调 initAdminTheme()（固定浅色，用户可手动切）。
+// 语言策略：initLanguage() 优先读 localStorage，未设置时默认中文。
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Language } from '@/types'
@@ -51,12 +55,6 @@ export const useAppStore = defineStore('app', () => {
     localStorage.setItem('theme', theme.value)
   }
 
-  // 设置指定主题并立即应用、持久化
-  function setTheme(next: 'light' | 'dark') {
-    theme.value = next
-    applyTheme()
-  }
-
   // 后台管理端初始化主题：默认白天（浅色），不随时间自动切换深色；
   // 用户仍可通过后台导航栏按钮手动切换（走 toggleTheme）。
   function initAdminTheme() {
@@ -90,7 +88,6 @@ export const useAppStore = defineStore('app', () => {
     toggleLanguage,
     initLanguage,
     toggleTheme,
-    setTheme,
     initTheme,
     initAdminTheme,
     setActiveTab

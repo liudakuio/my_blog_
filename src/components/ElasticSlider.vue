@@ -1,4 +1,8 @@
-<!-- 弹性滑块组件：支持步进模式和连续模式，用于音乐播放器音量控制 -->
+<!--
+  弹性滑块组件：支持步进模式和连续模式，用于音乐播放器音量控制
+  引用关系：被 layout/components/MusicPlayer.vue 用作音量条。
+  契约：派发 update:modelValue（支持 v-model）与 change（拖拽结束）两个事件，取值 0 ~ maxValue。
+-->
 <template>
   <div class="slider">
     <!-- 左侧图标插槽（如静音/取消静音按钮） -->

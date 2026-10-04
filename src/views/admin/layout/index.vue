@@ -1,4 +1,9 @@
-<!-- 后台管理框架：左侧可折叠菜单 + 顶部导航 + 内容区 -->
+<!--
+  后台管理框架：左侧可折叠菜单 + 顶部导航 + 内容区
+  数据来源：侧边菜单来自 userStore.menus（/api/auth/menus 下发的菜单树），非前端写死。
+  引用关系：由 router 的 /admin 路由作为父布局加载，组合 Sidebar + Navbar + <router-view>。
+  注意：窗口宽度 < 1280px 时侧边栏默认折叠。
+-->
 <template>
   <div class="admin-layout">
     <Sidebar :collapsed="collapsed" />

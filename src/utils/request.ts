@@ -1,5 +1,7 @@
 // Axios 请求封装：统一 baseURL、超时设置、请求拦截器（注入 JWT）、
 // 响应拦截器（拆出业务数据 + 401 统一登出跳转）。
+// 调用约定：service 的返回值已是业务 data（拦截器剥掉了 { code, msg, data } 外壳），
+// 业务层不要再取 .data；需要读 msg 的场景（如登录取令牌）改用 requestRaw。
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 

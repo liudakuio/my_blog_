@@ -1,4 +1,8 @@
-<!-- 联系页：邮箱 + 社交平台卡片（微信/小红书/B站/500px/GitHub），悬浮显示提示 -->
+<!--
+  联系页：邮箱 + 社交平台卡片（微信/小红书/B站/500px/GitHub），悬浮显示提示
+  数据来源：全部文案与社交账号来自 src/data/home.ts 的 CONTACT_DATA（本地写死），无接口请求。
+  注意：要改联系方式直接改 CONTACT_DATA 的 zh / en 两个语言版本。
+-->
 <template>
   <div class="contact-page">
     <!-- 大标题 + 介绍语 -->

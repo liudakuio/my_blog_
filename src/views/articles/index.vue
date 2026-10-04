@@ -1,4 +1,8 @@
-<!-- 文章页：分类侧栏/标签筛选 + 文章卡片列表，支持日期排序 -->
+<!--
+  文章页：分类侧栏/标签筛选 + 文章卡片列表，支持日期排序
+  数据来源：列表与分类走 articleStore（/api/articles 分页、/api/article-categories）；页头文案为 src/data/articlesPage.ts 写死。
+  注意：分类筛选与日期排序都由服务端处理，切换后重新请求，前端不做本地排序。
+-->
 <template>
   <div class="articles-page">
     <!-- 页面标题 + 描述 -->

@@ -1,5 +1,9 @@
 // 后台「内容资源 -> 独立页面」注册表（若依风格拆分后的 19 个页面）。
 // 路由按后端菜单 perms 推导出的 resource 命中此处；未登记的资源回退通用 CRUD 页兜底。
+// 重要：这里的值是 lazy import，**页面文件不会被任何模块静态 import**，
+// 静态分析时切勿因「无 import」把 views/admin/content/ 下的页面判为孤儿文件而删除。
+// 新增内容页流程：写好 views/admin/content/xxx/index.vue -> 在此登记 resource 名
+// （与后端菜单 perms 推导出的 resource 完全一致）-> 后端菜单下发该资源即可出现入口。
 export const CONTENT_PAGES: Record<string, () => Promise<any>> = {
   // 站点与首页
   site_text: () => import('@/views/admin/content/siteText/index.vue'),

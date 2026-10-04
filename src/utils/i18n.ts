@@ -1,4 +1,7 @@
 // 双语字段取值工具：兼容 lang=all（{ zh, en }）与单语（string）两种返回形态
+// 被谁引用：PortfolioGrid（分类标签）、store/site（导航文案）、views/articles 等需要解析多语字段处。
+// 设计原因：后端 lang=all 与 lang=zh/en 两种模式下同一字段形态不同，
+// 业务层统一走 pickText 可避免到处写 `typeof x === 'string' ? x : x.zh`。
 import type { Language } from '@/types'
 
 type I18nValue = unknown
@@ -24,14 +27,3 @@ export function pickText(value: I18nValue, lang: Language, fallback = ''): strin
   return fallback
 }
 
-/** 取多语字符串数组（tags / awards 等） */
-export function pickList(value: I18nValue, lang: Language): string[] {
-  if (Array.isArray(value)) return value as string[]
-  if (value && typeof value === 'object') {
-    const hit = (value as Record<string, unknown>)[lang]
-    if (Array.isArray(hit)) return hit as string[]
-    const zh = (value as Record<string, unknown>).zh
-    if (Array.isArray(zh)) return zh as string[]
-  }
-  return []
-}

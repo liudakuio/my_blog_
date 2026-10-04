@@ -1,4 +1,8 @@
-<!-- 仪表盘：欢迎语 + 内容统计卡片 + 快捷入口 -->
+<!--
+  仪表盘：欢迎语 + 内容统计卡片 + 快捷入口
+  数据来源：统计与快捷入口所需数据走 @/api/admin 的 adminList；不依赖站点配置接口。
+  引用关系：由 router 后台路由 /admin/dashboard 直接注册（非动态菜单）。
+-->
 <template>
   <div class="dashboard">
     <!-- 欢迎横幅 -->
@@ -41,7 +45,7 @@ import { storeToRefs } from 'pinia'
 import dayjs from 'dayjs'
 import { useUserStore } from '@/store/user'
 import { adminList } from '@/api/admin'
-import { Document, Files, Headset, Collection, Share, Notebook } from '@element-plus/icons-vue'
+import { Document, Files, Collection } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()

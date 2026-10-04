@@ -1,4 +1,10 @@
 // 作品数据：作品列表、作品分类、作品详情（含图集）
+// 被谁引用：components/PortfolioGrid.vue（首页精选与作品页共用同一份 store 数据）。
+// 两条数据来源（勿混）：
+//   1) 作品页 /portfolio：loadProjects() -> /api/projects
+//   2) 首页「精选作品」：前端写死的 FEATURED_PROJECTS，不调用 loadProjects
+// 分类字典无论哪条来源都走 loadCategories() -> /api/project-categories。
+// 图集策略：列表接口不返回图集内容，点开详情时按 galleryCount 用 fetchDetail 补拉。
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getProjectList, getProjectDetail, getProjectCategories } from '@/api'
