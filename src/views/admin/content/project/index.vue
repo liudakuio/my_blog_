@@ -143,14 +143,14 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="760px"
+      width="800px"
       append-to-body
       :close-on-click-modal="false"
       destroy-on-close
     >
-      <el-form ref="formRef" :model="form" label-width="96px" :rules="rules">
+      <el-form ref="formRef" :model="form" label-width="80px" :rules="rules">
         <el-row :gutter="16">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="分类" prop="category">
               <el-select v-model="form.category" placeholder="请选择分类" filterable clearable class="w-full">
                 <el-option
@@ -162,26 +162,74 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="排序" prop="sort">
               <el-input-number v-model="form.sort" :controls="false" class="w-full" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
+            <el-form-item label="图标" prop="icon">
+              <el-input v-model="form.icon" placeholder="图标类名" />
+            </el-form-item>
+          </el-col>
+           <!-- 角色 -->
+          <el-col :span="8">
+            <el-form-item label="角色" prop="role">
+              <el-input v-model="form.role"/>
+            </el-form-item>
+          </el-col>
+          <!-- 状态 -->
+          <el-col :span="8">
             <el-form-item label="状态" prop="status">
               <el-select v-model="form.status" class="w-full">
                 <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
               </el-select>
             </el-form-item>
           </el-col>
+          <!-- 标签 -->
+          <el-col :span="8">
+            <el-form-item label="标签" prop="tags">
+              <el-input v-model="form.tags"/>
+            </el-form-item>
+          </el-col>
+          <!-- 标题 -->
           <el-col :span="12">
-            <el-form-item label="图标" prop="icon">
-              <el-input v-model="form.icon" placeholder="图标类名" />
+            <el-form-item label="标题" prop="title">
+              <el-input v-model="form.title"/>
+            </el-form-item>
+          </el-col>
+          <!-- 子标题 -->
+          <el-col :span="12">
+            <el-form-item label="子标题" prop="subtitle">
+              <el-input v-model="form.subtitle"/>
+            </el-form-item>
+          </el-col>
+          <!-- 角色详情 -->
+          <el-col :span="12">
+            <el-form-item label="角色详情" prop="roleDetail">
+              <el-input v-model="form.roleDetail"/>
+            </el-form-item>
+          </el-col>
+          <!-- 想法 -->
+          <el-col :span="12">
+            <el-form-item label="想法" prop="concept">
+              <el-input v-model="form.concept"/>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="B站ID" prop="bilibiliId">
-              <el-input v-model="form.bilibiliId" placeholder="BV 号或 av 号" />
+            <el-form-item label="视频链接" prop="videoUrl">
+              <el-input v-model="form.videoUrl" placeholder="https://" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="GitHub" prop="githubUrl">
+              <el-input v-model="form.githubUrl" placeholder="https://" />
+            </el-form-item>
+          </el-col>
+          <!-- 描述 -->
+          <el-col :span="24">
+            <el-form-item label="描述" prop="description">
+              <el-input v-model="form.description" type="textarea" :rows="3" placeholder="项目描述" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -229,31 +277,6 @@
                   </el-button>
                 </div>
               </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="视频链接" prop="videoUrl">
-              <el-input v-model="form.videoUrl" placeholder="https://" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="Figma" prop="figmaUrl">
-              <el-input v-model="form.figmaUrl" placeholder="https://" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="官网" prop="websiteUrl">
-              <el-input v-model="form.websiteUrl" placeholder="https://" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="GitHub" prop="githubUrl">
-              <el-input v-model="form.githubUrl" placeholder="https://" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="备注" prop="remark">
-              <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="内部备注" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -389,7 +412,14 @@ const defaultForm = () => ({
   githubUrl: '',
   sort: 0,
   status: '0',
-  remark: ''
+  remark: '',
+  title: '',
+  subtitle: '',
+  description: '',
+  role: '',
+  roleDetail: '',
+  concept: '',
+  tags: ''
 })
 const form = reactive(defaultForm())
 

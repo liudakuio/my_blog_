@@ -14,15 +14,6 @@
     <!-- 搜索区 -->
     <div v-show="showSearch" class="search-card">
       <el-form :model="queryParams" inline @submit.prevent>
-        <el-form-item label="文章ID">
-          <el-input
-            v-model="queryParams.id"
-            placeholder="请输入文章ID"
-            clearable
-            style="width: 180px"
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
         <el-form-item label="分类">
           <el-input
             v-model="queryParams.category"
@@ -97,7 +88,6 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column prop="id" label="文章ID" width="140" show-overflow-tooltip />
         <el-table-column prop="category" label="分类" width="120" show-overflow-tooltip />
         <el-table-column label="封面" width="90" align="center">
           <template #default="{ row }">
@@ -148,11 +138,6 @@
     >
       <el-form ref="formRef" :model="form" label-width="96px" :rules="rules">
         <el-row :gutter="16">
-          <el-col :span="8">
-            <el-form-item label="文章ID" prop="id">
-              <el-input v-model="form.id" :disabled="isEdit" placeholder="唯一标识，如 a1" />
-            </el-form-item>
-          </el-col>
           <el-col :span="8">
             <el-form-item label="分类" prop="category">
               <el-input v-model="form.category" placeholder="如 notes" />
@@ -359,7 +344,6 @@ const defaultForm = () => ({
 const form = reactive(defaultForm())
 
 const rules = {
-  id: [{ required: true, message: '文章ID不能为空', trigger: 'blur' }],
   category: [{ required: true, message: '分类不能为空', trigger: 'blur' }]
 }
 
