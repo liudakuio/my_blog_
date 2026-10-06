@@ -5,7 +5,7 @@
 // 后台路由不是写死的：登录后由 /api/auth/menus 返回的菜单树动态生成，见 buildDynamicRoutes。
 // 页面归属规则（改菜单前必读）：
 //   权限前缀 system: -> SYSTEM_PAGES（user / menu / role），未登记的落到 Placeholder.vue
-//   权限前缀 blog:   -> CONTENT_PAGES（config/adminPages.ts 的 19 个页面），
+//   权限前缀 blog:   -> CONTENT_PAGES（config/adminPages.ts 的 8 个页面），
 //                       未登记的资源回退通用 CRUD 页 views/admin/crud/index.vue
 // 因此 views/admin/content/ 与 system/ 下的页面文件都不会被静态 import，
 // 静态分析时切勿当作孤儿文件删除。

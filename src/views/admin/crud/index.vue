@@ -269,7 +269,7 @@ async function load() {
   if (!resource.value) return
   loading.value = true
   try {
-    // 7 个专用资源走专用接口（驼峰 VO），其余走通用 CRUD（下划线）
+    // 5 个专用资源走专用接口（驼峰 VO），其余走通用 CRUD（下划线）
     const res = resource.value
     const data: any = isDedicatedResource(res)
       ? await adminResourceList(res, buildParams())

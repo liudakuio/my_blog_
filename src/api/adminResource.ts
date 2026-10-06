@@ -1,9 +1,10 @@
-// 后端已把 7 个常用资源从通用 CRUD 拆出「专用接口」：类型化 VO、字段驼峰。
+// 后端已把 5 个常用资源从通用 CRUD 拆出「专用接口」：类型化 VO、字段驼峰。
 // 路径与通用 CRUD 一致（/api/admin/{resource}），差异只在出入参：
 //   专用接口 -> 驼峰；通用 CRUD -> 下划线列名。
 // 详见《前端改造方案》第二、四节。
 // 被谁引用：views/admin/content/ 下对应的专用页面（siteText / project / projectCategory /
-// article / articleCategory / educationText），以及 crud/index.vue 中 isDedicatedResource 为真时的分支。
+// article / articleCategory），以及 crud/index.vue 中 isDedicatedResource 为真时的分支。
+// 变更记录：education_text 已随后端下线移除。
 // 维护注意：DEDICATED_RESOURCES 的取值必须与 adminTypes.ts 的 AdminVoMap key 完全一致，
 // 否则 isDedicatedResource 的类型守卫会与实际返回类型脱节。
 import service from '@/utils/request'
@@ -15,8 +16,7 @@ export const DEDICATED_RESOURCES = [
   'project',
   'project_category',
   'article',
-  'article_category',
-  'education_text'
+  'article_category'
 ] as const
 
 export type DedicatedResource = keyof AdminVoMap

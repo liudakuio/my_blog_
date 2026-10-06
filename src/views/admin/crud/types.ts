@@ -1,5 +1,5 @@
 // 通用 CRUD 字段 / 资源配置类型
-// 被谁引用：同目录 schema.ts（21 个资源的字段配置）与 crud/index.vue（按类型渲染表格列与表单控件）。
+// 被谁引用：同目录 schema.ts（8 个资源的字段配置）与 crud/index.vue（按类型渲染表格列与表单控件）。
 // 扩展新控件类型时：先在 FieldType 增加字面量，再到 crud/index.vue 的表单/表格渲染分支加对应处理。
 export type FieldType =
   | 'text'

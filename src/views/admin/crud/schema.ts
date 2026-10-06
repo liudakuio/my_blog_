@@ -1,5 +1,7 @@
-// 21 个后台资源的字段配置：驱动通用 CRUD 的表格列与表单控件。
-// 字段类型：text / textarea / number / select / image / link / datetime
+// 8 个后台资源的字段配置：驱动通用 CRUD 的表格列与表单控件。
+// 字段类型：text / textarea / number / select / image / link / markdown / datetime
+// 变更记录：project_i18n / project_tag / project_award / project_gallery 以及
+// 教育、竞赛相关资源已随后端下线移除。
 // 被谁引用：crud/index.vue 通过下面的 SCHEMA_MAP[route.meta.resource] 取配置渲染页面。
 // 注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走通用 CRUD 页，
 // 已拆分独立页面的资源（如 project / article）不读这里的配置，改字段要改对应页面。
@@ -68,7 +70,7 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('sort', '排序', 'number', { width: 90 })
     ]
   },
-  // 5 作品分类
+  // 4 作品分类
   {
     resource: 'project_category',
     title: '作品分类',
@@ -81,7 +83,7 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('status', '状态', 'select', { options: STATUS, width: 90 })
     ]
   },
-  // 6 作品
+  // 5 作品
   {
     resource: 'project',
     title: '作品列表',
@@ -100,58 +102,7 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('remark', '备注', 'textarea', { table: false })
     ]
   },
-  // 7 作品多语
-  {
-    resource: 'project_i18n',
-    title: '作品多语',
-    fields: [
-      autoId(),
-      f('project_id', '作品ID', 'text', { required: true, width: 110 }),
-      f('lang', '语言', 'select', { options: LANG, width: 90 }),
-      f('title', '标题', 'text'),
-      f('subtitle', '副标题', 'text', { table: false }),
-      f('description', '描述', 'textarea'),
-      f('role', '角色', 'text', { table: false }),
-      f('role_detail', '角色详情', 'textarea', { table: false }),
-      f('concept', '理念', 'textarea', { table: false })
-    ]
-  },
-  // 8 作品标签
-  {
-    resource: 'project_tag',
-    title: '作品标签',
-    fields: [
-      autoId(),
-      f('project_id', '作品ID', 'text', { required: true, width: 110 }),
-      f('tag_name_zh', '中文标签', 'text'),
-      f('tag_name_en', '英文标签', 'text'),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 9 作品获奖
-  {
-    resource: 'project_award',
-    title: '作品获奖',
-    fields: [
-      autoId(),
-      f('project_id', '作品ID', 'text', { required: true, width: 110 }),
-      f('award_name_zh', '中文奖项', 'text'),
-      f('award_name_en', '英文奖项', 'text'),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 10 作品图集
-  {
-    resource: 'project_gallery',
-    title: '作品图集',
-    fields: [
-      autoId(),
-      f('project_id', '作品ID', 'text', { required: true, width: 110 }),
-      f('image_url', '图片', 'image', { width: 90 }),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 11 文章分类
+  // 6 文章分类
   {
     resource: 'article_category',
     title: '文章分类',
@@ -166,7 +117,7 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('status', '状态', 'select', { options: STATUS, width: 90 })
     ]
   },
-  // 12 文章
+  // 7 文章
   {
     resource: 'article',
     title: '文章列表',
@@ -182,7 +133,7 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('content', '正文', 'markdown', { table: false, form: true, section: '正文内容' })
     ]
   },
-  // 13 文章多语
+  // 8 文章多语
   {
     resource: 'article_i18n',
     title: '文章多语',
@@ -191,86 +142,6 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('article_id', '文章ID', 'text', { required: true, width: 110 }),
       f('lang', '语言', 'select', { options: LANG, width: 90 }),
       f('title', '标题', 'text')
-    ]
-  },
-  // 15 教育文案
-  {
-    resource: 'education_text',
-    title: '教育文案',
-    fields: [
-      autoId(),
-      f('configKey', '配置键', 'text', { required: true }),
-      f('valueZh', '中文值', 'textarea'),
-      f('valueEn', '英文值', 'textarea'),
-      f('remark', '备注', 'text', { table: false })
-    ]
-  },
-  // 16 教育/工作经历
-  {
-    resource: 'experience',
-    title: '教育/工作经历',
-    fields: [
-      strId(),
-      f('year', '年份', 'text', { width: 110 }),
-      f('exp_type', '类型', 'text', { width: 110 }),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 17 经历多语
-  {
-    resource: 'experience_i18n',
-    title: '经历多语',
-    fields: [
-      autoId(),
-      f('exp_id', '经历ID', 'text', { required: true, width: 110 }),
-      f('lang', '语言', 'select', { options: LANG, width: 90 }),
-      f('title', '标题', 'text'),
-      f('institution', '机构', 'text'),
-      f('description', '描述', 'textarea')
-    ]
-  },
-  // 18 荣誉条目
-  {
-    resource: 'honor',
-    title: '荣誉管理',
-    fields: [
-      autoId(),
-      f('honor_type', '类型', 'text', { width: 130 }),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 19 荣誉多语
-  {
-    resource: 'honor_i18n',
-    title: '荣誉多语',
-    fields: [
-      autoId(),
-      f('honor_id', '荣誉ID', 'text', { required: true, width: 110 }),
-      f('lang', '语言', 'select', { options: LANG, width: 90 }),
-      f('content', '内容', 'textarea')
-    ]
-  },
-  // 20 竞赛分组
-  {
-    resource: 'competition',
-    title: '竞赛分组',
-    fields: [
-      autoId(),
-      f('level_zh', '中文级别', 'text'),
-      f('level_en', '英文级别', 'text'),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 21 竞赛明细
-  {
-    resource: 'competition_award',
-    title: '竞赛明细',
-    fields: [
-      autoId(),
-      f('comp_id', '竞赛ID', 'text', { required: true, width: 110 }),
-      f('content_zh', '中文内容', 'text'),
-      f('content_en', '英文内容', 'text'),
-      f('sort', '排序', 'number', { width: 90 })
     ]
   }
 ]

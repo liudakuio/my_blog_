@@ -1,21 +1,13 @@
-// 后台 7 个「专用接口」资源的类型化 VO（字段驼峰）。
+// 后台 5 个「专用接口」资源的类型化 VO（字段驼峰）。
 // 字段与约束详见《后台专用接口说明》第二节。
 // 通用 CRUD 资源返回下划线列名，不走这里的类型。
-// 保留说明：这 6 个 VO 目前仅被 AdminVoMap 引用（页面侧统一 as any），
+// 保留说明：这 5 个 VO 目前仅被 AdminVoMap 引用（页面侧统一 as any），
 // 但它们是 adminResourceList/Get/Create/Update 的返回类型推导锚点，
 // 后续若要给后台页面补齐类型，直接 import 这里即可，故不删除。
+// 变更记录：education_text 已随后端下线移除（含其 VO 与 AdminVoMap key）。
 
 /** 站点全局配置（KV 文案） */
 export interface AdminSiteTextVo {
-  id: number
-  configKey: string
-  valueZh?: string
-  valueEn?: string
-  remark?: string
-}
-
-/** 教育经历与荣誉（文案）；remark 仅写入、不返回 */
-export interface AdminEducationTextVo {
   id: number
   configKey: string
   valueZh?: string
@@ -93,7 +85,6 @@ export interface AdminVoMap {
   project_category: AdminProjectCategoryVo
   article: AdminArticleVo
   article_category: AdminArticleCategoryVo
-  education_text: AdminEducationTextVo
 }
 
 /** 新增 / 修改入参：字段可选；PUT 时 null 表示「不更新」 */
