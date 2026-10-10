@@ -219,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import {
   Headset, ArrowDown, DArrowLeft, DArrowRight, CaretRight, VideoPause, TopRight
 } from '@element-plus/icons-vue'
@@ -280,14 +280,53 @@ watch(isLoading, (val) => {
   }
 })
 
-// 播放状态变化时：执行淡入淡出
+// 播放状态变化时：淡入播放 或 淡出后暂停
 watch(isPlaying, () => {
-  handleFade()
+  const audio = audioRef.value
+  if (!audio) return
+
+  if (isPlaying.value) {
+    // 淡入：先静音播放，再逐步提升音量
+    if (audio.paused) {
+      audio.volume = 0
+      audio.play().catch((err) => {
+        // 切歌导致的播放中断（AbortError）不算失败
+        if ((err as DOMException)?.name === 'AbortError') return
+        isPlaying.value = false
+      })
+    }
+    fadeTo(isMuted.value ? 0 : volume.value)
+  } else {
+    // 淡出完成后暂停
+    fadeTo(0, () => { audio.pause() })
+  }
 })
 
-// 切歌时：执行淡入淡出
-watch(currentSongIndex, () => {
-  handleFade()
+// 切歌时：等 audio 的 src 更新到 DOM 后自动续播（修复切歌后不立即播放的问题）
+watch(currentSongIndex, async () => {
+  if (!isPlaying.value) return
+  await nextTick()
+  const audio = audioRef.value
+  if (!audio) return
+
+  audio.volume = 0
+  try {
+    await audio.play()
+    fadeTo(isMuted.value ? 0 : volume.value)
+  } catch (err) {
+    if ((err as DOMException)?.name !== 'AbortError') {
+      isPlaying.value = false
+    }
+  }
+})
+
+// 音量/静音变化时：立即应用到音频元素（修复调节音量不生效的问题）
+watch([volume, isMuted], ([v, muted]) => {
+  const audio = audioRef.value
+  if (!audio) return
+  // 淡出暂停过程中不干预，避免打断暂停流程
+  if (fadeInterval && !isPlaying.value) return
+  fadeTo(muted ? 0 : v)
 })
 
 // 音量变化时：持久化到 localStorage
@@ -303,35 +342,24 @@ function getSongUrl(song: typeof currentSong.value, isCover = false) {
   return encodeURI(normalized)
 }
 
-// 音频淡入淡出：每 50ms 调整 0.1 的音量步进
-function handleFade() {
+// 音频淡入淡出到目标音量：每 50ms 调整 0.1 的音量步进，完成后可选执行回调
+function fadeTo(target: number, onDone?: () => void) {
   const audio = audioRef.value
   if (!audio) return
 
-  const targetVolume = isMuted.value ? 0 : volume.value
-  const finalTarget = isPlaying.value ? targetVolume : 0
-
-  // 淡入：先静音播放，再逐步提升音量
-  if (isPlaying.value && audio.paused) {
-    audio.volume = 0
-    audio.play().catch(() => { isPlaying.value = false })
-  }
-
-  if (fadeInterval) { clearInterval(fadeInterval) }
+  if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null }
 
   fadeInterval = setInterval(() => {
     const current = audio.volume
     const step = 0.1
-    const diff = finalTarget - current
+    const diff = target - current
 
     if (Math.abs(diff) < step) {
-      audio.volume = finalTarget
-      if (!isPlaying.value && !audio.paused) {
-        audio.pause()
-      }
+      audio.volume = target
       if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null }
+      onDone?.()
     } else {
-      audio.volume = current + (diff > 0 ? step : -step)
+      audio.volume = Math.min(1, Math.max(0, current + (diff > 0 ? step : -step)))
     }
   }, 50)
 }

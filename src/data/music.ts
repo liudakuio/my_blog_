@@ -15,17 +15,17 @@ export interface Song {
 export const MUSIC_PLAYLIST: Song[] = [
   {
     id: 'local-01',
-    title: "Pirene's Fountain",
-    artist: 'Vallès',
+    title: "主动",
+    artist: '加木',
     cover: '/music/covers/pirene.jpg',
-    audio: '/music/audio/pirene.mp3'
+    audio: '/music/audio/zhudong.mp3'
   },
   {
     id: 'local-02',
-    title: 'Sleepless nights - lofi hiphop mix pt.2',
-    artist: 'Mixed Artists',
+    title: "Pirene's Fountain",
+    artist: 'Vallès',
     cover: '/music/covers/lofi.jpg',
-    audio: '/music/audio/lofi.mp3'
+    audio: '/music/audio/pirene.mp3'
   },
   {
     id: 'local-03',
