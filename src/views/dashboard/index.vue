@@ -79,15 +79,6 @@
     <!-- 作品网格：分类筛选 + 项目卡片，通过 externalFilter 控制初始筛选 -->
     <!-- 作品网格：数据走 /api/projects（后端按分类筛选），Hero 点击通过 externalFilter 切换分类 -->
     <PortfolioGrid :external-filter="portfolioCategory" />
-
-    <!-- Toast 提示：点击无分类的标题时显示"还在学..." -->
-    <Teleport to="body">
-      <Transition name="toast">
-        <div v-if="showToast" class="toast">
-          {{ appStore.language === 'zh' ? '还在学... 🍳' : 'Still Learning... 🍳' }}
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -96,7 +87,61 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Location } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-import { HOME_DATA, CONTACT_DATA, type HeroItem } from '@/data/home'
+import type { Language, HeroItem, HomeContent } from '@/types'
+
+interface SocialLinks {
+  wechat: string
+  xiaohongshu: string
+  bilibili: string
+  px500: string
+}
+
+interface ContactContent {
+  baseLabel: string
+  locationValue: string
+  contactLabel: string
+  emailMeLabel: string
+  email: string
+  hello: string
+  intro: string
+  socials: SocialLinks
+  tooltip?: string
+  githubLabel: string
+}
+
+const HOME_DATA: Record<Language, HomeContent> = {
+  zh: {
+    heroItems: [
+      { text: '软件开发', annotation: '（目前主业）', category: Category.DEV },
+      { text: '嵌入式开发', annotation: '（想学习）', category: Category.DESIGN },
+      { text: '做饭', annotation: '（还在学）', category: null }
+    ],
+    intro: '', selectedWorks: '精选作品', years: '[ 2024 — 2026 ]'
+  },
+  en: {
+    heroItems: [
+      { text: 'Software Dev', annotation: '(Current main work)', category: Category.DEV },
+      { text: 'Embedded dev', annotation: '(I want to learn)', category: Category.DESIGN },
+      { text: 'Cooking', annotation: '(Still Learning)', category: null }
+    ],
+    intro: '', selectedWorks: 'Selected Works', years: '[ 20XX — 20XX ]'
+  }
+}
+
+const CONTACT_DATA: Record<Language, ContactContent> = {
+  zh: {
+    baseLabel: 'BASE', locationValue: '河南 郑州', contactLabel: '取得联系', emailMeLabel: '邮箱',
+    email: 'liudakuio@gmail.com', hello: '你好 :-)', intro: '欢迎探讨与合作。',
+    socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
+    githubLabel: 'Gitee'
+  },
+  en: {
+    baseLabel: 'BASE', locationValue: 'HENAN ZHENGZHOU', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
+    email: '1365693530@qq.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
+    socials: { wechat: 'YourWeChatID', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
+    githubLabel: 'Gitee'
+  }
+}
 import { Category } from '@/types'
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 

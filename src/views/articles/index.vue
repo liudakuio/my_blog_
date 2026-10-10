@@ -142,7 +142,17 @@ import { useRouter } from 'vue-router'
 import { Filter, Calendar, ArrowUp, ArrowDown, Reading, TopRight } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { useArticleStore } from '@/store/articles'
-import { ARTICLES_PAGE_DATA } from '@/data/articlesPage'
+import type { Language } from '@/types'
+
+interface ArticlesPageContent {
+  title: string
+  description: string
+}
+
+const ARTICLES_PAGE_DATA: Record<Language, ArticlesPageContent> = {
+  zh: { title: '文章', description: '个人思考、学习分享与生活记录。' },
+  en: { title: 'Articles', description: 'Thoughts, learning journey, and life records.' }
+}
 import { pickText } from '@/utils/i18n'
 
 const appStore = useAppStore()

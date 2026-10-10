@@ -66,7 +66,6 @@ export interface ContactContent {
   socials: SocialLinks
   tooltip?: string
   githubLabel: string
-  footerDesign: string
 }
 
 export interface NavItem {

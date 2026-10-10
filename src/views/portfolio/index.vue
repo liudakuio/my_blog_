@@ -21,7 +21,17 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/store/app'
-import { PORTFOLIO_PAGE_DATA } from '@/data/portfolioPage'
+import type { Language } from '@/types'
+
+interface PortfolioPageContent {
+  title: string
+  description: string
+}
+
+const PORTFOLIO_PAGE_DATA: Record<Language, PortfolioPageContent> = {
+  zh: { title: '作品', description: '路上拍的照片、应用开发作品和美食。' },
+  en: { title: 'Portfolio', description: 'Photos taken on the road, application development works, and food.' }
+}
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 
 const route = useRoute()

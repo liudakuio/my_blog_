@@ -19,7 +19,6 @@
       <!-- 页脚：版权信息 + 设计声明 -->
       <footer class="footer">
         <p>&copy; 2026 刘中魁</p>
-        <p>{{ contactContent.footerDesign }}</p>
       </footer>
     </main>
   </div>
@@ -28,7 +27,42 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAppStore } from '@/store/app'
-import { CONTACT_DATA } from '@/data/home'
+import type { Language } from '@/types'
+
+interface SocialLinks {
+  wechat: string
+  xiaohongshu: string
+  bilibili: string
+  px500: string
+}
+
+interface ContactContent {
+  baseLabel: string
+  locationValue: string
+  contactLabel: string
+  emailMeLabel: string
+  email: string
+  hello: string
+  intro: string
+  socials: SocialLinks
+  tooltip?: string
+  githubLabel: string
+}
+
+const CONTACT_DATA: Record<Language, ContactContent> = {
+  zh: {
+    baseLabel: 'BASE', locationValue: '河南 郑州', contactLabel: '取得联系', emailMeLabel: '邮箱',
+    email: 'liudakuio@gmail.com', hello: '你好 :-)', intro: '欢迎探讨与合作。',
+    socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
+    githubLabel: 'Gitee'
+  },
+  en: {
+    baseLabel: 'BASE', locationValue: 'HENAN ZHENGZHOU', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
+    email: '1365693530@qq.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
+    socials: { wechat: 'YourWeChatID', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
+    githubLabel: 'Gitee'
+  }
+}
 import SidebarNav from './components/SidebarNav.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 
