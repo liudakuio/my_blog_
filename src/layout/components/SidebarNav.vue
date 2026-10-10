@@ -55,13 +55,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch ,onMounted, onUnmounted } from 'vue'
+import { useRouter,useRoute } from 'vue-router'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
 
 const router = useRouter()
+const route = useRoute()
 const appStore = useAppStore()
 const siteStore = useSiteStore()
 // 是否已滚动（用于切换导航栏样式）
@@ -69,6 +70,17 @@ const isScrolled = ref(false)
 
 // 导航菜单项：来自 /api/site/config，按当前语言解析文案
 const navItems = computed(() => siteStore.navItems(appStore.language))
+
+// 根据当前路由同步导航高亮：修复刷新 / 浏览器前进后退后导航高亮错位的问题
+// 路由名（如 Contact / Dashboard / Portfolio / Articles）小写即对应页签 id；
+// 文章详情 ArticleDetail 归属“文章(Articles)”页签。
+function syncActiveTab() {
+  const name = String(route.name)
+  let tab = name.charAt(0).toLowerCase() + name.slice(1)
+  if (name === 'ArticleDetail') tab = 'articles'
+  appStore.setActiveTab(tab)
+}
+
 
 // 跳转到指定页签：更新 store 状态 + 路由跳转 + 回到顶部
 function goTo(tab: string) {
@@ -81,11 +93,15 @@ function goTo(tab: string) {
 let scrollHandler: (() => void) | null = null
 
 onMounted(() => {
+  syncActiveTab() // ← 刷新后立刻对齐当前路由
   scrollHandler = () => {
     isScrolled.value = window.scrollY > 120
   }
   window.addEventListener('scroll', scrollHandler)
 })
+
+// 路由变化时同步高亮（覆盖浏览器前进 / 后退按钮）
+watch(() => route.name, () => syncActiveTab())
 
 onUnmounted(() => {
   if (scrollHandler) {

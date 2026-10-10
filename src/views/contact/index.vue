@@ -18,79 +18,25 @@
         <p class="social-account social-account--selectable">{{ content.email }}</p>
       </div>
 
-      <!-- 微信公众号卡片：hover 显示提示浮层 -->
+      <!-- 微信卡片：hover 显示提示浮层 -->
       <div
         class="social-card social-card--wechat"
-        @click="openLink('https://mp.weixin.qq.com/s/MD5T-BsAgUi9yUo6ISY1CA')"
         @mouseenter="showWechatTooltip = true"
         @mouseleave="showWechatTooltip = false"
       >
         <el-icon :size="48" class="social-icon"><ChatDotSquare /></el-icon>
-        <h3 class="social-name">{{ appStore.language === 'zh' ? '公众号' : 'WeChat' }}</h3>
+        <h3 class="social-name">{{ appStore.language === 'zh' ? '微信号' : 'WeChat' }}</h3>
         <p class="social-account">{{ content.socials.wechat }}</p>
-        <!-- 悬浮提示 -->
-        <div v-if="showWechatTooltip" class="social-tooltip">
-          <p class="social-tooltip-text">
-            Click to view profile<br />
-            <span class="social-tooltip-sub">mp.weixin.qq.com</span>
-          </p>
-        </div>
       </div>
 
-      <!-- 小红书卡片：hover 显示提示浮层 -->
-      <div
-        class="social-card social-card--red"
-        @click="openLink('https://www.xiaohongshu.com/user/profile/61bbb882000000001000e80d')"
-        @mouseenter="showRedTooltip = true"
-        @mouseleave="showRedTooltip = false"
-      >
-        <el-icon :size="48" class="social-icon"><Camera /></el-icon>
-        <h3 class="social-name">{{ appStore.language === 'zh' ? '小红书' : 'RED' }}</h3>
-        <p class="social-account">{{ content.socials.xiaohongshu }}</p>
-        <div v-if="showRedTooltip" class="social-tooltip">
-          <p class="social-tooltip-text">
-            Click to view profile<br />
-            <span class="social-tooltip-sub">xiaohongshu.com</span>
-          </p>
-        </div>
-      </div>
-
-      <!-- B站卡片：hover 显示提示浮层 -->
-      <div
-        class="social-card social-card--bili"
-        @click="openLink('https://b23.tv/XNNX02Q')"
-        @mouseenter="showBiliTooltip = true"
-        @mouseleave="showBiliTooltip = false"
-      >
-        <el-icon :size="48" class="social-icon"><VideoCamera /></el-icon>
-        <h3 class="social-name">Bilibili</h3>
-        <p class="social-account">{{ content.socials.bilibili }}</p>
-        <div v-if="showBiliTooltip" class="social-tooltip">
-          <p class="social-tooltip-text">
-            Click to view profile<br />
-            <span class="social-tooltip-sub">b23.tv/XNNX02Q</span>
-          </p>
-        </div>
-      </div>
-
-      <!-- 500px 摄影社区卡片 -->
-      <div
-        class="social-card social-card--px"
-        @click="openLink('https://500px.com.cn/LuN3cy')"
-      >
-        <el-icon :size="48" class="social-icon"><Camera /></el-icon>
-        <h3 class="social-name">500px</h3>
-        <p class="social-account">{{ content.socials.px500 }}</p>
-      </div>
-
-      <!-- GitHub 卡片 -->
+      <!-- Gitee 卡片 -->
       <div
         class="social-card social-card--github"
-        @click="openLink('https://github.com/LuN3cy')"
+        @click="openLink('https://gitee.com/liuminglzk')"
       >
         <el-icon :size="48" class="social-icon"><Monitor /></el-icon>
         <h3 class="social-name">{{ content.githubLabel }}</h3>
-        <p class="social-account">@LuN3cy</p>
+        <p class="social-account">@liuminglzk</p>
       </div>
     </div>
   </div>

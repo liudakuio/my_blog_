@@ -55,16 +55,16 @@ export const CONTACT_DATA: Record<Language, ContactContent> = {
     locationValue: '河南 郑州',
     contactLabel: '取得联系',
     emailMeLabel: '邮箱',
-    email: '1365693530@qq.com',
+    email: 'liudakuio@gmail.com',
     hello: '你好 :-)',
     intro: '欢迎探讨与合作。',
     socials: {
-      wechat: 'YourWeChatID',
+      wechat: 'vv8886666999',
       xiaohongshu: 'YourID',
       bilibili: 'YourID',
       px500: 'YourID'
     },
-    githubLabel: 'GitHub',
+    githubLabel: 'Gitee',
     footerDesign: 'Powered by Gemini 3 Pro'
   },
   en: {
@@ -81,7 +81,7 @@ export const CONTACT_DATA: Record<Language, ContactContent> = {
       bilibili: 'YourID',
       px500: 'YourID'
     },
-    githubLabel: 'GitHub',
+    githubLabel: 'Gitee',
     footerDesign: 'Powered by Gemini 3 Pro'
   }
 }
