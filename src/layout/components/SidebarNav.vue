@@ -1,62 +1,60 @@
 <!--
-  顶部导航栏：Logo、页面导航、主题切换，滚动时自动变为胶囊样式
+  顶部导航栏：Logo、页面导航、语言与主题切换，滚动时收拢为反色实心胶囊。
   数据来源：导航项来自 siteStore.navItems(language)（/api/site/config 的 nav，按 sort 排序、按当前语言解析文案）。
   注意：接口失败时导航为空，接口恢复后需刷新页面重新拉取（loadConfig 只成功一次即缓存）。
+  交互：navItems 为空时（接口未就绪）回退到本地默认四项，避免导航栏只剩 Logo。
 -->
 <template>
-  <div class="navbar-wrapper">
-    <!-- 导航栏主体：滚动后变为胶囊毛玻璃样式，未滚动时全宽透明 -->
+  <div class="navbar-wrapper" :class="{ 'navbar-wrapper--scrolled': isScrolled }">
     <nav class="navbar" :class="{ 'navbar--scrolled': isScrolled }">
       <!-- Logo：点击回到主页 -->
-      <div class="logo" @click="goTo('dashboard')">
-        <h1 class="logo-title" :class="{ 'logo-title--scrolled': isScrolled }">
-          刘中魁 <span class="logo-subtitle"></span>
-        </h1>
-      </div>
+      <button class="logo" @click="goTo('dashboard')">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-title">刘中魁</span>
+      </button>
 
       <!-- 右侧导航区：菜单项 + 分隔线 + 功能按钮 -->
-      <div class="navbar-menu" :class="{ 'navbar-menu--scrolled': isScrolled }">
-        <!-- 页面导航按钮：当前页高亮 + 底部下划线动画 -->
+      <div class="navbar-menu">
         <button
-          v-for="item in navItems"
+          v-for="item in navItems.length ? navItems : fallbackNav"
           :key="item.id"
           class="navbar-item"
           :class="{ 'navbar-item--active': appStore.activeTab === item.id }"
           @click="goTo(item.id)"
         >
           {{ item.label }}
-          <!-- 下划线指示器：当前页展开，hover 时展开 -->
           <span
             class="navbar-item-underline"
             :class="{ 'navbar-item-underline--active': appStore.activeTab === item.id }"
           ></span>
         </button>
 
-        <!-- 分隔线 -->
-        <div class="navbar-divider"></div>
+        <span class="navbar-divider" aria-hidden="true"></span>
 
-        <!-- 功能按钮组 -->
         <div class="navbar-actions">
-          <!-- 语言切换按钮：切换中文 / English -->
-          <button class="lang-btn" @click="appStore.toggleLanguage()">
+          <!-- 语言切换：中 / EN -->
+          <button class="icon-btn" :title="appStore.language === 'zh' ? 'English' : '中文'" @click="appStore.toggleLanguage()">
             {{ appStore.language === 'zh' ? '中' : 'EN' }}
           </button>
-          <!-- 主题切换按钮：浅色时显示月亮图标，深色时显示太阳图标 -->
-          <button class="theme-btn" @click="appStore.toggleTheme()">
-            <el-icon :size="20">
+          <!-- 主题切换：浅色显示月亮，深色显示太阳 -->
+          <button class="icon-btn" :title="appStore.theme === 'light' ? 'Dark' : 'Light'" @click="appStore.toggleTheme()">
+            <el-icon :size="16">
               <Moon v-if="appStore.theme === 'light'" />
               <Sunny v-else />
             </el-icon>
           </button>
         </div>
       </div>
+
+      <!-- 滚动进度条：贴在胶囊底部，宽度随页面滚动位置变化 -->
+      <span class="navbar-progress" :style="{ transform: `scaleX(${progress})` }" aria-hidden="true"></span>
     </nav>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch ,onMounted, onUnmounted } from 'vue'
-import { useRouter,useRoute } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import { useSiteStore } from '@/store/site'
@@ -65,15 +63,22 @@ const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
 const siteStore = useSiteStore()
-// 是否已滚动（用于切换导航栏样式）
+
 const isScrolled = ref(false)
+const progress = ref(0)
 
 // 导航菜单项：来自 /api/site/config，按当前语言解析文案
 const navItems = computed(() => siteStore.navItems(appStore.language))
 
-// 根据当前路由同步导航高亮：修复刷新 / 浏览器前进后退后导航高亮错位的问题
-// 路由名（如 Contact / Dashboard / Portfolio / Articles）小写即对应页签 id；
-// 文章详情 ArticleDetail 归属“文章(Articles)”页签。
+// 接口未就绪时的兜底导航，保证导航栏结构完整
+const fallbackNav = computed(() => [
+  { id: 'dashboard', label: appStore.language === 'zh' ? '首页' : 'Home' },
+  { id: 'portfolio', label: appStore.language === 'zh' ? '作品' : 'Works' },
+  { id: 'articles', label: appStore.language === 'zh' ? '文章' : 'Articles' },
+  { id: 'contact', label: appStore.language === 'zh' ? '联系' : 'Contact' }
+])
+
+// 根据当前路由同步导航高亮：修复刷新 / 浏览器前进后退后高亮错位的问题
 function syncActiveTab() {
   const name = String(route.name)
   let tab = name.charAt(0).toLowerCase() + name.slice(1)
@@ -81,37 +86,36 @@ function syncActiveTab() {
   appStore.setActiveTab(tab)
 }
 
-
 // 跳转到指定页签：更新 store 状态 + 路由跳转 + 回到顶部
 function goTo(tab: string) {
   appStore.setActiveTab(tab)
   router.push({ name: tab.charAt(0).toUpperCase() + tab.slice(1) })
-  window.scrollTo(0, 0)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// 监听滚动事件：超过 120px 时切换为胶囊样式
 let scrollHandler: (() => void) | null = null
 
 onMounted(() => {
-  syncActiveTab() // ← 刷新后立刻对齐当前路由
+  syncActiveTab()
   scrollHandler = () => {
-    isScrolled.value = window.scrollY > 120
+    isScrolled.value = window.scrollY > 80
+    // 滚动进度：已滚动距离 / 可滚动总距离
+    const max = document.documentElement.scrollHeight - window.innerHeight
+    progress.value = max > 0 ? Math.min(window.scrollY / max, 1) : 0
   }
-  window.addEventListener('scroll', scrollHandler)
+  window.addEventListener('scroll', scrollHandler, { passive: true })
+  scrollHandler()
 })
 
 // 路由变化时同步高亮（覆盖浏览器前进 / 后退按钮）
 watch(() => route.name, () => syncActiveTab())
 
 onUnmounted(() => {
-  if (scrollHandler) {
-    window.removeEventListener('scroll', scrollHandler)
-  }
+  if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
 })
 </script>
 
 <style lang="less" scoped>
-/* 导航栏外层：固定顶部居中，滚动时 padding 变化 */
 .navbar-wrapper {
   position: fixed;
   top: 0;
@@ -120,178 +124,173 @@ onUnmounted(() => {
   z-index: 50;
   display: flex;
   justify-content: center;
-  padding-top: 1rem;
-  transition: all 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
+  padding: 1rem var(--gutter);
+  transition: padding var(--dur-slow) var(--ease-out);
 
   @media (min-width: 768px) {
-    padding-top: 1.5rem;
+    padding: 1.5rem var(--gutter);
+  }
+
+  &.navbar-wrapper--scrolled {
+    padding-top: 0.75rem;
   }
 }
 
-/* 导航栏主体：未滚动全宽透明，滚动后胶囊毛玻璃 */
+/* 导航栏主体：未滚动时全宽透明，滚动后收拢成反色实心胶囊 */
 .navbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 96vw;
+  gap: 1rem;
+  width: 100%;
+  max-width: var(--container);
   padding: 0.5rem 0;
   background: transparent;
   border: 1px solid transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  transition: all 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
+  border-radius: 0;
+  transition: all var(--dur-slow) var(--ease-out);
+  overflow: hidden;
 
   &.navbar--scrolled {
-    width: 92vw;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #e5e7eb;
-    border-radius: 1rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-
-    .dark & {
-      background: rgba(0, 0, 0, 0.9);
-      border-color: #1f2937;
-      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.05);
-    }
+    width: auto;
+    max-width: calc(100% - 1rem);
+    padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+    background: var(--inverse-bg);
+    color: var(--inverse-fg);
+    border-color: var(--ink);
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 
     @media (min-width: 768px) {
-      width: auto;
-      gap: 3rem;
-      padding: 1rem 2.5rem;
-      border-radius: 9999px;
+      padding: 0.625rem 1rem 0.625rem 2rem;
+      gap: 2rem;
     }
   }
 }
 
-/* Logo：点击回到主页 */
+/* Logo */
 .logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
   cursor: pointer;
 }
 
-/* Logo 标题：滚动后字号变小 */
-.logo-title {
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  text-transform: uppercase;
-  line-height: 1;
-  color: #000000;
-  font-size: clamp(1.25rem, 3vw, 3rem);
-  transition: all 0.5s ease-in-out;
+/* Logo 前的方块标记，滚动时变为强调色 */
+.logo-mark {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border: 2px solid var(--accent);
+  background: transparent;
+  transition: background-color var(--dur) var(--ease-out);
 
-  .dark & {
-    color: #ffffff;
+  .navbar--scrolled & {
+    background: var(--accent);
+  }
+}
+
+.logo-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--fg);
+  font-size: 1.125rem;
+  transition: font-size var(--dur-slow) var(--ease-out), color var(--dur) var(--ease-out);
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
   }
 
-  &.logo-title--scrolled {
-    font-size: 1.25rem;
+  .navbar--scrolled & {
+    color: var(--inverse-fg);
+    font-size: 1rem;
 
     @media (min-width: 768px) {
-      font-size: 1.875rem;
+      font-size: 1.125rem;
     }
   }
 }
 
-/* Logo 副标题：小屏隐藏，sm 以上显示 */
-.logo-subtitle {
-  display: none;
-
-  @media (min-width: 640px) {
-    display: inline;
-  }
-}
-
-/* 右侧菜单区：横向滚动 + 渐隐遮罩 */
+/* 右侧菜单区 */
 .navbar-menu {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   overflow-x: auto;
   -ms-overflow-style: none;
   scrollbar-width: none;
-  transition: all 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
-
+  transition: gap var(--dur-slow) var(--ease-out);
 
   &::-webkit-scrollbar {
     display: none;
   }
 
   @media (min-width: 768px) {
-    gap: 3rem;
-  }
-
-  &.navbar-menu--scrolled {
-    gap: 0.5rem;
-
-    @media (min-width: 768px) {
-      gap: 2rem;
-    }
+    gap: 2rem;
   }
 }
 
-/* 导航菜单项 */
+/* 导航项：等宽小字号，配合间距形成图纸感 */
 .navbar-item {
   position: relative;
   flex-shrink: 0;
   padding: 0;
   border: none;
   background: none;
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
   white-space: nowrap;
-  color: #9ca3af;
+  color: var(--fg-faint);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--dur-fast) var(--ease-out);
 
   &:hover {
-    color: #000000;
+    color: var(--fg);
   }
 
-  .dark & {
-    color: #6b7280;
+  .navbar--scrolled & {
+    color: color-mix(in srgb, var(--inverse-fg) 55%, transparent);
 
     &:hover {
-      color: #ffffff;
+      color: var(--inverse-fg);
     }
   }
 
   &.navbar-item--active {
-    color: #000000;
+    color: var(--fg);
 
-    .dark & {
-      color: #ffffff;
+    .navbar--scrolled & {
+      color: var(--inverse-fg);
     }
   }
 
   @media (min-width: 768px) {
-    font-size: 1.25rem;
+    font-size: 0.75rem;
   }
 }
 
-/* 导航菜单项下划线指示器 */
+/* 当前项下方的强调色下划线 */
 .navbar-item-underline {
   position: absolute;
-  bottom: -0.25rem;
+  bottom: -0.375rem;
   left: 0;
   width: 100%;
   height: 2px;
-  background: #000000;
+  background: var(--accent);
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 0.2s;
-
-  .dark & {
-    background: #ffffff;
-  }
+  transition: transform var(--dur) var(--ease-out);
 
   .navbar-item:hover & {
     transform: scaleX(1);
@@ -300,26 +299,21 @@ onUnmounted(() => {
   &.navbar-item-underline--active {
     transform: scaleX(1);
   }
-
-  @media (min-width: 768px) {
-    height: 3px;
-  }
 }
 
-/* 导航分隔线 */
+/* 分隔线 */
 .navbar-divider {
   flex-shrink: 0;
   width: 1px;
-  height: 1.5rem;
-  margin: 0 0.5rem;
-  background: #e5e7eb;
+  height: 1.25rem;
+  background: var(--border);
 
-  .dark & {
-    background: #374151;
+  .navbar--scrolled & {
+    background: color-mix(in srgb, var(--inverse-fg) 25%, transparent);
   }
 
-  @media (min-width: 768px) {
-    height: 2rem;
+  @media (max-width: 767px) {
+    display: none;
   }
 }
 
@@ -329,75 +323,61 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
-
-  @media (min-width: 768px) {
-    gap: 1rem;
-  }
 }
 
-/* 主题切换按钮 */
-.theme-btn {
-  display: flex;
+/* 方形硬边图标按钮：与整体的硬边语言统一 */
+.icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
-  border: none;
-  background: none;
-  border-radius: 9999px;
-  color: #000000;
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background: #f3f4f6;
-  }
-
-  .dark & {
-    color: #ffffff;
-
-    &:hover {
-      background: #1f2937;
-    }
-  }
-
-  @media (min-width: 768px) {
-    padding: 0.5rem;
-  }
-}
-
-/* 语言切换按钮：显示当前语言，点击切换中/英 */
-.lang-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.25rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #e5e7eb;
-  background: none;
-  border-radius: 9999px;
-  font-size: 0.875rem;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.025em;
-  color: #000000;
+  letter-spacing: 0.08em;
+  color: var(--fg);
   cursor: pointer;
-  transition: background-color 0.3s, color 0.3s;
+  transition: background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 
   &:hover {
-    background: #f3f4f6;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
   }
 
-  .dark & {
-    border-color: #374151;
-    color: #ffffff;
+  .navbar--scrolled & {
+    border-color: color-mix(in srgb, var(--inverse-fg) 30%, transparent);
+    color: var(--inverse-fg);
 
     &:hover {
-      background: #1f2937;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
     }
   }
+}
 
-  @media (min-width: 768px) {
-    font-size: 1rem;
-    min-width: 2.75rem;
+/* 滚动进度条：贴在胶囊底边，从左展开 */
+.navbar-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease-out), transform 0.1s linear;
+
+  .navbar--scrolled & {
+    opacity: 1;
   }
 }
 </style>

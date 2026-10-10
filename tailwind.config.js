@@ -7,14 +7,22 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      // 与 src/styles/tokens.css 保持一致：颜色一律引用 CSS 变量
       fontFamily: {
-        sans: ['"OPPO Sans"', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+        sans: ['var(--font-body)'],
+        display: ['var(--font-display)'],
+        mono: ['var(--font-mono)'],
       },
       colors: {
-        primary: '#000000',
-        secondary: '#666666',
-        bg: '#ffffff',
-        line: '#e5e5e5',
+        paper: 'var(--paper)',
+        ink: 'var(--ink)',
+        accent: 'var(--accent)',
+        line: 'var(--border)',
+        muted: 'var(--fg-muted)',
+        faint: 'var(--fg-faint)',
+      },
+      maxWidth: {
+        container: 'var(--container)',
       },
       boxShadow: {
         'pill': '0 4px 20px rgba(0,0,0,0.05)',

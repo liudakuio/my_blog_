@@ -1,84 +1,104 @@
 <!--
-  主页：Hero 大标题 + 联系信息 + 精选作品网格，点击分类标题可筛选作品
-  数据来源：Hero 文案与联系卡片为 src/data/home.ts 本地写死；
+  主页结构（自上而下）：
+    0. 每日一句 —— 全站顶部通栏，由 layout/index.vue 统一渲染（src/components/DailyEnglish.vue）
+    1. Hero —— 编号式大标题列表（可点击筛选作品）+ 右侧状态卡
+    2. 技术栈跑马灯 —— 新增模块，模块之间的视觉分隔（src/components/StackTicker.vue）
+    3. 精选作品 —— 分隔线 + 标题 + 年份 + PortfolioGrid 作品网格
+  数据来源：Hero 文案与联系卡片为本地写死；
   作品列表走后端 /api/projects（按分类由后端筛选），分类字典走 /api/project-categories。
 -->
 <template>
   <div class="dashboard-page">
-    <!-- Hero 区域：左侧大标题 + 个人简介，右侧联系信息 -->
-    <section class="hero">
-      <!-- 左侧：Hero 大标题列表 + 个人简介 -->
-      <div class="hero-left">
-        <!-- 大标题列表：每个标题可点击筛选对应分类的作品 -->
-        <div class="hero-headlines">
-          <div v-for="(item, index) in heroItems" :key="index" class="hero-item" @click="handleHeadlineClick(item)">
-            <h1
-              class="hero-title"
-              :class="appStore.language === 'en' ? 'hero-title--en' : 'hero-title--zh'"
-            >
-              <!-- "摄影摄像"特殊处理：拆分为两个可独立点击的词 -->
-              <template v-if="isPhotographyVideography(item)">
-                <span
-                  v-for="(part, pIndex) in splitPhotographyVideography(item)"
-                  :key="pIndex"
-                  :class="part.category ? 'part--clickable' : 'part--static'"
-                  @click.stop="part.category && handleHeadlineClick({ ...item, category: part.category })"
-                >
-                  {{ part.text }}
+    <!-- Hero：栅格底纹 + 编号大标题 + 右侧状态卡 -->
+    <section class="hero u-grid-bg">
+      <div class="u-container">
+        <div class="hero-grid">
+          <!-- 左侧：编号大标题列表 -->
+          <div class="hero-left">
+            <p class="hero-eyebrow">PORTFOLIO &nbsp;/&nbsp; {{ content.years }}</p>
+
+            <div class="hero-headlines">
+              <button
+                v-for="(item, index) in heroItems"
+                :key="index"
+                class="hero-item"
+                :style="{ animationDelay: `${0.1 + index * 0.09}s` }"
+                @click="handleHeadlineClick(item)"
+              >
+                <span class="hero-row">
+                  <span class="hero-index">{{ String(index + 1).padStart(2, '0') }}</span>
+                  <h1
+                    class="hero-title"
+                    :class="appStore.language === 'en' ? 'hero-title--en' : 'hero-title--zh'"
+                  >
+                    <!-- "摄影摄像"特殊处理：拆分为两个可独立点击的词 -->
+                    <template v-if="isPhotographyVideography(item)">
+                      <span
+                        v-for="(part, pIndex) in splitPhotographyVideography(item)"
+                        :key="pIndex"
+                        :class="part.category ? 'part--clickable' : 'part--static'"
+                        @click.stop="part.category && handleHeadlineClick({ ...item, category: part.category })"
+                      >
+                        {{ part.text }}
+                      </span>
+                    </template>
+                    <template v-else>{{ item.text }}</template>
+                  </h1>
+                  <span class="hero-annotation">{{ item.annotation }}</span>
                 </span>
+                <span class="hero-divider" aria-hidden="true"></span>
+              </button>
+            </div>
+
+            <!-- 个人简介：按 | 分隔换行 -->
+            <p v-if="content.intro" class="hero-intro">
+              <template v-for="(line, i) in content.intro.split('|')" :key="i">
+                {{ line }}<br class="intro-br-desktop" /><span class="intro-space-mobile">&nbsp;</span>
               </template>
-              <template v-else>
-                {{ item.text }}
-              </template>
-              <!-- 标题右侧的灰色注释文字 -->
-              <span class="hero-annotation">{{ item.annotation }}</span>
-            </h1>
-            <!-- 标题之间的分隔线（最后一个不显示） -->
-            <div v-if="index < heroItems.length - 1" class="hero-divider"></div>
+            </p>
           </div>
-        </div>
 
-        <!-- 个人简介：按 | 分隔换行 -->
-        <div class="hero-intro">
-          <template v-for="(line, i) in content.intro.split('|')" :key="i">
-            {{ line }}<br class="intro-br-desktop" /><span class="intro-space-mobile">&nbsp;</span>
-          </template>
-        </div>
-      </div>
+          <!-- 右侧：所在地 + 状态 + 联系入口 -->
+          <aside class="hero-right">
+            <div class="status-card">
+              <div class="status-card-head">
+                <span class="u-mono">{{ contactContent.baseLabel }}</span>
+                <span class="status-live"><span class="status-dot"></span>{{ statusText }}</span>
+              </div>
+              <div class="status-location">
+                <el-icon :size="20"><Location /></el-icon>
+                {{ contactContent.locationValue }}
+              </div>
+              <p class="status-note">{{ tooltipText }}</p>
+            </div>
 
-      <!-- 右侧：联系信息卡片 -->
-      <div class="hero-right">
-        <div class="hero-contact">
-          <h3 class="contact-label">{{ contactContent.baseLabel }}</h3>
-          <div class="contact-location">
-            <el-icon :size="24">
-              <Location />
-            </el-icon>
-            {{ contactContent.locationValue }}
-          </div>
-          <!-- 悬浮提示气泡 -->
-          <div class="contact-tooltip">{{ tooltipText }}</div>
-        </div>
-
-        <!-- "取得联系"链接：跳转到联系页 -->
-        <div class="contact-link" @click="navigateTo('contact')">
-          <span class="contact-arrow">→</span>
-          <h3 class="contact-link-label">{{ contactContent.contactLabel }}</h3>
+            <button class="contact-link" @click="navigateTo('contact')">
+              <span class="contact-link-label">{{ contactContent.contactLabel }}</span>
+              <span class="contact-arrow">&rarr;</span>
+            </button>
+          </aside>
         </div>
       </div>
     </section>
 
-    <!-- 分隔线 -->
-    <div class="section-divider"></div>
-    <!-- "精选作品"标题 + 年份范围 -->
-    <div class="works-header">
-      <h2 class="works-title">{{ content.selectedWorks }}</h2>
-      <span class="works-years">{{ content.years }}</span>
+    <!-- 技术栈跑马灯（新增模块；每日一句已改为全站顶部通栏，见 layout/index.vue） -->
+    <StackTicker />
+
+    <!-- 精选作品 -->
+    <div class="u-container">
+      <div class="section-divider"></div>
+      <div class="works-header">
+        <h2 class="works-title">{{ content.selectedWorks }}</h2>
+        <span class="works-years">{{ content.years }}</span>
+      </div>
+
+      <PortfolioGrid :external-filter="portfolioCategory" />
     </div>
 
-    <!-- 作品网格：分类筛选 + 项目卡片，通过 externalFilter 控制初始筛选 -->
-    <!-- 作品网格：数据走 /api/projects（后端按分类筛选），Hero 点击通过 externalFilter 切换分类 -->
-    <PortfolioGrid :external-filter="portfolioCategory" />
+    <!-- 点击无分类标题时的提示 -->
+    <transition name="toast">
+      <div v-if="showToast" class="toast">{{ toastText }}</div>
+    </transition>
   </div>
 </template>
 
@@ -88,6 +108,9 @@ import { useRouter } from 'vue-router'
 import { Location } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import type { Language, HeroItem, HomeContent } from '@/types'
+import { Category } from '@/types'
+import PortfolioGrid from '@/components/PortfolioGrid.vue'
+import StackTicker from '@/components/StackTicker.vue'
 
 interface SocialLinks {
   wechat: string
@@ -142,8 +165,6 @@ const CONTACT_DATA: Record<Language, ContactContent> = {
     githubLabel: 'Gitee'
   }
 }
-import { Category } from '@/types'
-import PortfolioGrid from '@/components/PortfolioGrid.vue'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -151,29 +172,34 @@ const appStore = useAppStore()
 // 当前筛选的作品分类（由 Hero 标题点击设置）
 const portfolioCategory = ref<string>('All')
 
-// 首页内容数据（本地维护，不读取后端 home 节点）
 const content = computed(() => HOME_DATA[appStore.language])
-// 首页右侧联系卡片数据（本地维护）
 const contactContent = computed(() => CONTACT_DATA[appStore.language])
-
-// Hero 大标题列表
 const heroItems = computed(() => content.value.heroItems || [])
-// Toast 提示是否显示
+
 const showToast = ref(false)
 
-// 所在地 hover 提示文案
-const tooltipText = computed(() => {
-  return contactContent.value.tooltip || (appStore.language === 'zh'
-    ? '我在郑州，可以交个朋友哦！'
-    : 'I\'m in Zhengzhou. Would you like to make friends with me?')
-})
+// 状态卡上的实时文案
+const statusText = computed(() => (appStore.language === 'zh' ? '可接洽' : 'Open to work'))
 
-// 判断是否为"摄影摄像"标题（需要拆分为两个可点击区域）
+// 所在地说明文案
+const tooltipText = computed(() =>
+  contactContent.value.tooltip ||
+  (appStore.language === 'zh'
+    ? '我在郑州，可以交个朋友哦！'
+    : "I'm in Zhengzhou. Would you like to make friends with me?")
+)
+
+// 无分类标题的提示文案
+const toastText = computed(() =>
+  appStore.language === 'zh' ? '这一项还没有作品 :)' : 'No works in this category yet :)'
+)
+
+// 判断是否为"摄影摄像"标题（需拆分为两个可点击区域）
 function isPhotographyVideography(item: HeroItem): boolean {
   return item.text.includes('摄影摄像') || item.text.includes('Photography & Videography')
 }
 
-// 将"摄影摄像"拆分为独立的"摄影"和"摄像"两个可点击区域
+// 将"摄影摄像"拆分为独立的"摄影"和"摄像"
 function splitPhotographyVideography(item: HeroItem) {
   if (appStore.language === 'zh') {
     return [
@@ -188,13 +214,12 @@ function splitPhotographyVideography(item: HeroItem) {
   ]
 }
 
-// 跳转到指定页面
 function navigateTo(tab: string) {
   appStore.setActiveTab(tab)
   router.push({ name: tab.charAt(0).toUpperCase() + tab.slice(1) })
 }
 
-// 点击 Hero 标题：有分类则筛选作品，无分类则显示 Toast 提示
+// 点击 Hero 标题：有分类则筛选作品，无分类则提示
 function handleHeadlineClick(item: HeroItem) {
   if (item.category) {
     portfolioCategory.value = item.category
@@ -208,140 +233,146 @@ function handleHeadlineClick(item: HeroItem) {
 <style lang="less" scoped>
 .dashboard-page {
   width: 100%;
-  max-width: 96vw;
-  margin: 0 auto;
 }
 
-/* Hero 区域：左侧标题 + 右侧联系信息 */
+/* ---------- Hero ---------- */
 .hero {
+  position: relative;
+  padding: 2rem 0 3.5rem;
+
+  @media (min-width: 1024px) {
+    padding: 3rem 0 5rem;
+  }
+}
+
+.hero-grid {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2rem;
-  margin-bottom: 3rem;
+  gap: 2.5rem;
 
   @media (min-width: 1024px) {
     display: grid;
-    grid-template-columns: repeat(12, 1fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
     gap: 4rem;
-    margin-bottom: 5rem;
+    align-items: start;
   }
 }
 
-.hero-left {
-  width: 100%;
-
-  @media (min-width: 1024px) {
-    grid-column: span 7;
-  }
+.hero-eyebrow {
+  margin: 0 0 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-text);
 }
 
 .hero-headlines {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  margin-bottom: 1.5rem;
+}
 
-  @media (min-width: 1024px) {
-    margin-bottom: 2rem;
+/* 大标题行：编号 + 标题 + 注释，hover 时整行点亮 */
+.hero-item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--fg-faint);
+  cursor: pointer;
+  animation: riseIn 0.75s var(--ease-out) both;
+  transition: color var(--dur) var(--ease-out);
+
+  &:hover {
+    color: var(--fg);
+
+    .hero-index {
+      color: var(--accent-text);
+    }
+  }
+
+  /* 第一条（主业）默认点亮，其余灰度，形成主次 */
+  &:first-child {
+    color: var(--fg);
+
+    .hero-index {
+      color: var(--accent-text);
+    }
   }
 }
 
-.hero-item {
-  cursor: pointer;
+.hero-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  @media (min-width: 768px) {
+    gap: 1.25rem;
+  }
+}
+
+.hero-index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+  transition: color var(--dur) var(--ease-out);
 }
 
 .hero-title {
   margin: 0;
+  font-family: var(--font-display);
   font-weight: 900;
-  letter-spacing: -0.05em;
-  line-height: 1.25;
-  color: #000000;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  color: currentColor;
   white-space: nowrap;
-  overflow: visible;
-  transition: all 0.3s;
+  transition: color var(--dur) var(--ease-out);
 
-  .dark & {
-    color: #ffffff;
+  &.hero-title--zh {
+    font-size: clamp(2.5rem, 11vw, 7rem);
   }
 
   &.hero-title--en {
-    font-size: 8vw;
-
-    @media (min-width: 1024px) {
-      font-size: 6vw;
-    }
-  }
-
-  &.hero-title--zh {
-    font-size: 14vw;
-
-    @media (min-width: 1024px) {
-      font-size: 8vw;
-    }
+    font-size: clamp(1.75rem, 7vw, 4.5rem);
   }
 }
 
-/* 可点击的拆分词块 */
-.part--clickable {
-  cursor: pointer;
-  transition: opacity 0.3s;
-
-  &:hover {
-    opacity: 0.7;
-  }
-}
-
-.part--static {
-  cursor: default;
-}
-
-/* 标题右侧注释文字 */
 .hero-annotation {
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 0.5rem;
-  font-size: 0.3em;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: normal;
-  color: #9ca3af;
-  transform: translateY(-0.1em);
-
-  @media (min-width: 1024px) {
-    margin-left: 1rem;
-  }
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  transform: translateY(-0.35em);
 }
 
 .hero-divider {
-  width: 100%;
+  display: block;
   height: 1px;
-  margin: 0.5rem 0;
-  background: rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s;
-
-  .dark & {
-    background: rgba(255, 255, 255, 0.1);
-  }
+  margin: 1rem 0;
+  border-top: 1px dashed var(--border);
 
   @media (min-width: 768px) {
-    margin: 1rem 0;
+    margin: 1.5rem 0;
   }
 }
 
 .hero-intro {
-  font-size: 1.25rem;
+  margin: 2rem 0 0;
+  font-size: 1.125rem;
   font-weight: 500;
-  line-height: 1.625;
-  max-width: 56rem;
-  color: #4b5563;
-  transition: color 0.3s;
-
-  .dark & {
-    color: #d1d5db;
-  }
+  line-height: 1.75;
+  max-width: 42rem;
+  color: var(--fg-muted);
 
   @media (min-width: 768px) {
-    font-size: 1.875rem;
+    font-size: 1.375rem;
   }
 }
 
@@ -359,132 +390,129 @@ function handleHeadlineClick(item: HeroItem) {
   }
 }
 
+/* ---------- 右侧状态卡 ---------- */
 .hero-right {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+
+  @media (min-width: 1024px) {
+    padding-top: 0.5rem;
+  }
+}
+
+.status-card {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color var(--dur) var(--ease-out);
+
+  &:hover {
+    border-color: var(--ink);
+  }
+
+  @media (min-width: 768px) {
+    padding: 1.75rem;
+  }
+}
+
+.status-card-head {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  width: 100%;
-  height: 100%;
-  padding-top: 0;
-
-  @media (min-width: 1024px) {
-    grid-column: span 5;
-    padding-top: 1rem;
-  }
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border);
+  color: var(--fg-faint);
 }
 
-.hero-contact {
-  position: relative;
-  cursor: pointer;
-}
-
-.contact-label {
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
+/* 实时状态：呼吸圆点 + 文案 */
+.status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 700;
-  color: #000000;
-  transition: color 0.3s;
-
-  .dark & {
-    color: #ffffff;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: 1.875rem;
-  }
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
 }
 
-.contact-location {
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-location {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: #4b5563;
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--fg);
 
-  .dark & {
-    color: #d1d5db;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: 1.5rem;
-  }
-}
-
-.contact-tooltip {
-  position: absolute;
-  top: -2.5rem;
-  left: 0;
-  z-index: 50;
-  padding: 0.5rem 1rem;
-  background: rgba(6, 182, 212, 0.8);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  color: #ffffff;
-  font-size: 0.875rem;
-  font-weight: 700;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(0.95) translateY(0.5rem);
-  transition: all 0.3s;
-
-  .hero-contact:hover & {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+  @media (min-width: 768px) {
+    font-size: 1.75rem;
   }
 }
 
+.status-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--fg-muted);
+}
+
+/* 联系入口：hover 时反色并推动箭头 */
 .contact-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg);
   cursor: pointer;
-}
+  transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
 
-.contact-arrow {
-  font-size: 1.5rem;
-  color: #00d26a;
-  transition: transform 0.3s;
+  &:hover {
+    background: var(--inverse-bg);
+    color: var(--inverse-fg);
 
-  .contact-link:hover & {
-    transform: translateX(0.25rem);
-  }
-
-  @media (min-width: 1024px) {
-    font-size: 1.875rem;
+    .contact-arrow {
+      transform: translateX(5px);
+    }
   }
 }
 
 .contact-link-label {
-  margin: 0;
-  font-size: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #00d26a;
-  transition: opacity 0.3s;
-
-  .contact-link:hover & {
-    opacity: 0.8;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: 1.875rem;
-  }
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
+.contact-arrow {
+  font-size: 1.125rem;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+/* ---------- 作品区 ---------- */
 .section-divider {
-  width: 100%;
   height: 2px;
   margin-bottom: 1.5rem;
-  background: #f3f4f6;
-  transition: background-color 0.3s;
-
-  .dark & {
-    background: #1f2937;
-  }
+  background: var(--ink);
 
   @media (min-width: 1024px) {
     margin-bottom: 2rem;
@@ -496,8 +524,8 @@ function handleHeadlineClick(item: HeroItem) {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -511,77 +539,56 @@ function handleHeadlineClick(item: HeroItem) {
 
 .works-title {
   margin: 0;
-  font-size: 2.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3.5rem);
   font-weight: 900;
-  letter-spacing: -0.025em;
-  color: #000000;
-  transition: color 0.3s;
-
-  .dark & {
-    color: #ffffff;
-  }
-
-  @media (min-width: 768px) {
-    font-size: 3rem;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: 3.75rem;
-  }
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--fg);
 }
 
 .works-years {
-  font-family: monospace;
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #6b7280;
-  transition: color 0.3s;
-
-  .dark & {
-    color: #9ca3af;
-  }
+  letter-spacing: 0.14em;
+  color: var(--fg-muted);
 
   @media (min-width: 1024px) {
-    font-size: 1.125rem;
+    font-size: 0.8125rem;
   }
 }
 
+/* ---------- Toast ---------- */
 .toast {
   position: fixed;
-  bottom: 2.5rem;
+  bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 100;
-  padding: 1rem 2rem;
-  border-radius: 9999px;
-  background: #000000;
-  color: #ffffff;
-  font-size: 1.25rem;
+  z-index: 120;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   font-weight: 700;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-
-  .dark & {
-    background: #ffffff;
-    color: #000000;
-  }
+  letter-spacing: 0.12em;
+  white-space: nowrap;
 }
 
-/* Toast 提示动画：从下方淡入 */
 .toast-enter-active {
-  animation: fadeIn 0.3s ease-out;
+  animation: toastIn 0.3s var(--ease-out) both;
 }
-
 .toast-leave-active {
-  animation: fadeIn 0.3s ease-in reverse;
+  animation: toastIn 0.3s ease-in reverse both;
 }
 
-@keyframes fadeIn {
+@keyframes toastIn {
   from {
     opacity: 0;
-    transform: translate(-50%, 20px);
+    transform: translate(-50%, 18px);
   }
-
   to {
     opacity: 1;
     transform: translate(-50%, 0);

@@ -4,18 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="description" content="刘中魁 · 软件开发 / 嵌入式 / 平面交互 —— 个人作品集与博客" />
     <title>刘中魁</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+      /* 首屏兜底：在 CSS 与主题初始化完成前避免白屏闪色。
+         已移除 Google Fonts（Inter），国内访问不稳定且会阻塞渲染，改走系统字体栈。 */
+      html { background-color: #fafaf7; }
+      html.dark { background-color: #0c0c0d; }
       body {
-        background-color: #ffffff;
-        color: #000000;
+        margin: 0;
+        background-color: #fafaf7;
+        color: #111110;
         -webkit-font-smoothing: antialiased;
-        transition: background-color 0.3s ease, color 0.3s ease;
       }
-      .dark body {
-        background-color: #000000;
-        color: #ffffff;
+      html.dark body {
+        background-color: #0c0c0d;
+        color: #f2f0ea;
       }
       .bullet-point {
         display: inline-block;

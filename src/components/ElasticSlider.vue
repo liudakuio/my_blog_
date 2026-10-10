@@ -156,11 +156,7 @@ function handleTouchStart(e: TouchEvent) {
 .slider-icon-left,
 .slider-icon-right {
   flex-shrink: 0;
-  color: #71717a;
-
-  .dark & {
-    color: #a1a1aa;
-  }
+  color: var(--fg-muted);
 }
 
 .slider-track {
@@ -183,56 +179,40 @@ function handleTouchStart(e: TouchEvent) {
 .slider-rail {
   position: absolute;
   width: 100%;
-  height: 0.5rem;
-  background: #e4e4e7;
-  border-radius: 9999px;
+  height: 4px;
+  background: var(--border);
   overflow: hidden;
-  transition: transform 0.3s ease-out;
+  transition: transform 0.25s var(--ease-out);
   will-change: transform;
 
-  .dark & {
-    background: #27272a;
-  }
-
   .slider-track:hover & {
-    transform: scaleY(1.5);
+    transform: scaleY(2);
   }
 }
 
 .slider-fill {
   width: 100%;
   height: 100%;
-  background: #000000;
-  border-radius: 9999px;
+  background: var(--accent);
   transform-origin: left center;
   will-change: transform;
-
-  .dark & {
-    background: #ffffff;
-  }
 
   &.slider-fill--transition {
     transition: transform 0.2s ease-out;
   }
 }
 
+/* 手柄：方形墨块 + 中心朱点，替代原来的圆形 + 投影 */
 .slider-handle {
   position: absolute;
   left: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  background: #ffffff;
-  border: 1px solid #e4e4e7;
-  border-radius: 9999px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  width: 0.875rem;
+  height: 0.875rem;
+  background: var(--ink);
+  border-radius: var(--radius-xs);
   pointer-events: none;
   will-change: transform;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-  .dark & {
-    background: #e4e4e7;
-    border-color: #3f3f46;
-  }
 }
 
 .slider-handle-dot {
@@ -242,15 +222,10 @@ function handleTouchStart(e: TouchEvent) {
   right: 0;
   bottom: 0;
   margin: auto;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 9999px;
-  background: #000000;
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
   transition: all 0.3s;
-
-  .dark & {
-    background: #18181b;
-  }
 
   &.slider-handle-dot--small {
     transform: scale(0.5);

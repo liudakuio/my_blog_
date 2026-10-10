@@ -1,4 +1,5 @@
-/* 全局基础样式：重置、字体、共享关键帧动画（替代 Tailwind 内置 spin / pulse） */
+/* 全局基础样式：引入设计令牌、重置、共享关键帧动画与版式工具类 */
+@import './styles/tokens.css';
 
 * {
   box-sizing: border-box;
@@ -10,35 +11,153 @@ body {
   padding: 0;
 }
 
-body {
-  font-family: 'OPPO Sans', Inter, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* 旋转动画（音乐播放器加载圈使用） */
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 自定义滚动条，和发丝线的语言保持一致 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 3px solid var(--bg);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-faint);
+}
+
+/* ---------- 版式工具类 ---------- */
+
+/* 内容容器：大屏不再无限制拉伸 */
+.u-container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+/* 等宽批注：编号、日期、分类、元信息统一走这套字符 */
+.u-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* 22px 栅格底纹：工程师图纸质感 */
+.u-grid-bg {
+  background-image:
+    linear-gradient(to right, var(--border-soft) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-soft) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* 噪点遮罩：压掉大面积纯色的塑料感 */
+.u-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dark .u-noise {
+  opacity: 0.05;
+}
+
+/* ---------- 关键帧 ---------- */
+
+/* 旋转（播放器加载圈） */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
-
 .animate-spin {
   animation: spin 1s linear infinite;
 }
 
-/* 脉冲动画（音乐播放器状态指示灯使用） */
+/* 脉冲（状态指示灯） */
 @keyframes pulse {
   0%,
   100% {
     opacity: 1;
   }
-
   50% {
-    opacity: 0.5;
+    opacity: 0.35;
+  }
+}
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 入场：从下方裁切上移，用于 Hero 标题与模块的错位编排 */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 -20% 0);
   }
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* 入场变体：仅淡入上移，用于卡片 */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 跑马灯：内容重复两份，位移 -50% 无缝循环 */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* 尊重系统减弱动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

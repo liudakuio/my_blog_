@@ -10,7 +10,7 @@
 -->
 <template>
   <div class="portfolio-grid">
-    <!-- 分类筛选栏：sticky 吸顶，当前选中项加下划线高亮 -->
+    <!-- 分类筛选栏：sticky 吸顶，选中项为实底 -->
     <div class="filter-bar">
       <button
         v-for="cat in categories"
@@ -29,39 +29,41 @@
       :class="filter === 'All' ? 'project-grid--all' : 'project-grid--filtered'"
     >
       <div
-        v-for="project in filteredProjects"
+        v-for="(project, pIndex) in filteredProjects"
         :key="project.id"
         class="project-card"
         :class="{ 'project-card--dev': project.common.category === 'Development' }"
+        :style="{ animationDelay: `${Math.min(pIndex, 11) * 0.05}s` }"
         @click="openProjectDetail(project)"
       >
         <!-- 开发类项目卡片：图标 + 标题 + 描述 + 技术栈 -->
         <template v-if="project.common.category === 'Development'">
           <div class="dev-inner">
-            <!-- 项目图标 -->
-            <div class="dev-icon">
-              <el-icon :size="32">
-                <ChatLineSquare v-if="project.common.icon === 'message-circle'" />
-                <CreditCard v-if="project.common.icon === 'id-card'" />
-                <Document v-if="project.common.icon === 'file-text'" />
-                <VideoCamera v-if="project.common.icon === 'film'" />
-                <Monitor v-else />
-              </el-icon>
+            <div class="dev-head">
+              <div class="dev-icon">
+                <el-icon :size="26">
+                  <ChatLineSquare v-if="project.common.icon === 'message-circle'" />
+                  <CreditCard v-if="project.common.icon === 'id-card'" />
+                  <Document v-if="project.common.icon === 'file-text'" />
+                  <VideoCamera v-if="project.common.icon === 'film'" />
+                  <Monitor v-else />
+                </el-icon>
+              </div>
+              <span class="dev-index">{{ String(pIndex + 1).padStart(2, '0') }}</span>
             </div>
             <h3 class="dev-title">{{ projectContent(project).title }}</h3>
             <p class="dev-desc">{{ projectContent(project).description }}</p>
-            <!-- 底部：技术栈 + hover 箭头 -->
             <div class="dev-footer">
               <span class="dev-subtitle">{{ projectContent(project).subtitle }}</span>
               <div class="dev-arrow"><el-icon><TopRight /></el-icon></div>
             </div>
           </div>
         </template>
+
         <!-- 非开发类项目卡片：封面图 + 分类标签 + 标题 + 描述 + 标签 -->
         <template v-else>
-          <!-- 封面图区域：3种状态（有图片/B站视频/占位） -->
           <div class="cover-wrap">
-            <!-- 有封面图：显示图片，hover 时放大 -->
+            <!-- 有封面图 -->
             <img
               v-if="project.common.image && !project.common.image.includes('picsum')"
               :src="project.common.image"
@@ -71,10 +73,7 @@
               referrerpolicy="no-referrer"
             />
             <!-- B站视频：显示播放按钮 -->
-            <div
-              v-else-if="project.common.bilibiliId"
-              class="cover-video"
-            >
+            <div v-else-if="project.common.bilibiliId" class="cover-video">
               <div class="play-content">
                 <div class="play-button">
                   <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon"><path d="M8 5v14l11-7z"/></svg>
@@ -82,21 +81,12 @@
                 <span class="play-label">Video Preview</span>
               </div>
             </div>
-            <!-- 无封面图：显示标题占位 + "预览部署中"提示 -->
-            <div
-              v-else
-              class="cover-placeholder"
-            >
+            <!-- 无封面图：占位 -->
+            <div v-else class="cover-placeholder">
               <div>
-                <h4
-                  class="placeholder-title"
-                  :class="filter === 'All' ? 'placeholder-title--all' : 'placeholder-title--filtered'"
-                >
-                  {{ projectContent(project).title }}<br />
-                  <span class="placeholder-subtitle">{{ projectContent(project).subtitle }}</span>
-                </h4>
+                <h4 class="placeholder-title">{{ projectContent(project).title }}</h4>
                 <p class="preview-badge">
-                  {{ appStore.language === 'zh' ? '预览部署中...' : 'Preview Deploying...' }}
+                  {{ appStore.language === 'zh' ? '预览部署中' : 'Preview deploying' }}
                 </p>
               </div>
             </div>
@@ -104,27 +94,18 @@
             <div class="cover-tag">
               {{ categoryLabels[project.common.category] || project.common.category }}
             </div>
+            <!-- 右下角序号 -->
+            <span class="cover-index">{{ String(pIndex + 1).padStart(2, '0') }}</span>
           </div>
-          <!-- 标题 + 描述：hover 时底部边框变黑，右侧显示箭头 -->
+
           <div class="card-info">
-            <div class="card-info-text">
-              <h3
-                class="card-title"
-                :class="filter === 'All' ? 'card-title--all' : 'card-title--filtered'"
-              >
-                {{ projectContent(project).title }}
-              </h3>
-              <p class="card-desc">{{ projectContent(project).description }}</p>
-            </div>
-            <div class="card-arrow"><el-icon :size="24"><TopRight /></el-icon></div>
+            <h3 class="card-title">{{ projectContent(project).title }}</h3>
+            <p class="card-desc">{{ projectContent(project).description }}</p>
           </div>
+
           <!-- 标签列表（摄影类不显示标签） -->
           <div v-if="project.common.category !== 'Photography'" class="tag-row">
-            <span
-              v-for="tag in projectContent(project).tags"
-              :key="tag"
-              class="card-tag"
-            >#{{ tag }}</span>
+            <span v-for="tag in projectContent(project).tags" :key="tag" class="card-tag">#{{ tag }}</span>
           </div>
         </template>
       </div>
@@ -162,20 +143,17 @@
             referrerpolicy="no-referrer"
             draggable="false"
           />
-          <!-- 关闭按钮 -->
           <button class="lightbox-close" @click="lightboxIndex = null">
-            <el-icon :size="32"><Close /></el-icon>
+            <el-icon :size="28"><Close /></el-icon>
           </button>
-          <!-- 左右切换按钮（仅多图时显示） -->
           <template v-if="currentGallery.length > 1">
             <button class="lightbox-prev" @click="prevImage">
-              <el-icon :size="48"><ArrowLeft /></el-icon>
+              <el-icon :size="40"><ArrowLeft /></el-icon>
             </button>
             <button class="lightbox-next" @click="nextImage">
-              <el-icon :size="48"><ArrowRight /></el-icon>
+              <el-icon :size="40"><ArrowRight /></el-icon>
             </button>
           </template>
-          <!-- 页码指示器 -->
           <div class="lightbox-page">
             {{ lightboxIndex + 1 }} / {{ currentGallery.length }}
           </div>
@@ -220,28 +198,24 @@ const lightboxIndex = ref<number | null>(null)
 const currentGallery = ref<string[]>([])
 
 // 监听外部筛选变化（主页 Hero 点击 / 作品页 URL ?filter=）
-// immediate：setup 阶段就写入 filter，使 onMounted 的请求带上外部传入的分类
 watch(() => props.externalFilter, (val) => {
   if (val) filter.value = val
 }, { immediate: true })
 
-// 分类切换 -> 重新请求接口（后端筛选，每次切换都请求）
+// 分类切换 -> 重新请求接口（后端筛选）
 watch(filter, (val) => {
   portfolioStore.setCategory(val)
 })
 
-// 组件挂载时拉取作品与分类。
-// 首页与作品页共用同一份 store 数据，故挂载时按当前 filter 请求一次，
-// 避免「在作品页切了分类再回首页，首页仍显示上一个分类数据」。
-// 分类字典独立请求，不受列表筛选影响。
+// 组件挂载时拉取作品与分类
 onMounted(() => {
   portfolioStore.setCategory(filter.value)
   portfolioStore.loadCategories()
 })
 
-// 全部项目数据：接口返回的作品列表（已按当前分类由后端筛选完成）
+// 接口返回的作品列表（已按当前分类由后端筛选完成）
 const projectData = computed(() => portfolioStore.projects)
-// 是否正在加载：切分类重新请求时为 true，此时列表显示「作品加载中…」
+// 是否正在加载
 const loading = computed(() => portfolioStore.loading)
 
 // 可用分类：接口下发的分类字典 + 前端拼在首位的"全部"
@@ -252,7 +226,7 @@ const categories = computed(() => [
     .map(item => item.value)
 ])
 
-// 分类标签文案：优先取接口下发的双语字典，缺省回退分类值本身
+// 分类标签文案：优先取接口下发的双语字典
 const categoryLabels = computed(() => {
   const map: Record<string, string> = {
     All: appStore.language === 'zh' ? '全部' : 'All'
@@ -264,8 +238,7 @@ const categoryLabels = computed(() => {
   return map
 })
 
-// 当前展示的项目：筛选已由后端完成（/api/projects?category=），
-// 故这里直接返回接口数据，前端不再重复过滤，避免语义混乱
+// 筛选已由后端完成，这里直接返回接口数据
 const filteredProjects = computed(() => projectData.value)
 
 // 获取项目的当前语言内容
@@ -273,7 +246,7 @@ function projectContent(project: Project) {
   return appStore.language === 'zh' ? project.zh : project.en
 }
 
-// 打开项目详情弹窗：先展示列表数据，再按需拉取图集（列表接口不返回图集）
+// 打开项目详情弹窗：先展示列表数据，再按需拉取图集
 async function openProjectDetail(project: Project) {
   selectedProject.value = project
   displayProject.value = project
@@ -285,14 +258,13 @@ async function openProjectDetail(project: Project) {
 
   const detail = await portfolioStore.fetchDetail(project.id)
   if (!detail) return
-  // 弹窗仍打开时才更新，避免用户已关闭后仍赋值
   if (displayProject.value?.id === project.id) {
     displayProject.value = detail
     selectedProject.value = detail
   }
 }
 
-// 关闭项目详情弹窗：先清空选中状态，延迟 300ms 后销毁弹窗组件
+// 关闭弹窗：延迟 300ms 销毁
 function closeProjectDetail() {
   selectedProject.value = null
   document.body.style.overflow = ''
@@ -303,20 +275,17 @@ function closeProjectDetail() {
   }, 300)
 }
 
-// 打开灯箱
 function openLightbox(index: number, gallery: string[]) {
   currentGallery.value = gallery
   lightboxIndex.value = index
 }
 
-// 灯箱上一张（循环）
 function prevImage() {
   if (lightboxIndex.value !== null && currentGallery.value.length > 0) {
     lightboxIndex.value = (lightboxIndex.value - 1 + currentGallery.value.length) % currentGallery.value.length
   }
 }
 
-// 灯箱下一张（循环）
 function nextImage() {
   if (lightboxIndex.value !== null && currentGallery.value.length > 0) {
     lightboxIndex.value = (lightboxIndex.value + 1) % currentGallery.value.length
@@ -329,111 +298,90 @@ function nextImage() {
   width: 100%;
 }
 
-/* 分类筛选栏 */
+/* ---------- 分类筛选栏 ---------- */
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 3rem;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
   padding: 1rem 0;
-  border-bottom: 2px solid #000000;
+  border-bottom: 2px solid var(--ink);
   position: sticky;
-  top: 5rem;
+  top: 4.5rem;
   z-index: 30;
-  background: rgba(255, 255, 255, 0.95);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  background: var(--bg);
   overflow-x: auto;
   -ms-overflow-style: none;
   scrollbar-width: none;
-  transition: color 0.3s, background-color 0.3s, border-color 0.3s;
+  transition: background-color var(--dur) var(--ease-out);
 
   &::-webkit-scrollbar {
     display: none;
   }
 
-  .dark & {
-    border-color: #ffffff;
-    background: rgba(0, 0, 0, 0.95);
-  }
-
   @media (min-width: 768px) {
-    gap: 2rem;
-    margin-bottom: 4rem;
-    padding-bottom: 2rem;
-    top: 6rem;
+    gap: 0.625rem;
+    margin-bottom: 3.5rem;
+    padding-bottom: 1.5rem;
+    top: 5rem;
   }
 }
 
+/* 硬边 mono 标签，选中为实底 */
 .filter-btn {
-  padding: 0;
-  border: none;
-  background: none;
+  flex-shrink: 0;
+  padding: 0.4375rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: transparent;
   white-space: nowrap;
-  font-size: 1.125rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 700;
-  color: #9ca3af;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 
   &:hover {
-    color: #000000;
-  }
-
-  .dark & {
-    color: #4b5563;
-
-    &:hover {
-      color: #ffffff;
-    }
+    border-color: var(--ink);
+    color: var(--fg);
   }
 
   &.filter-btn--active {
-    color: #000000;
-    text-decoration: underline;
-    text-decoration-thickness: 4px;
-    text-underline-offset: 8px;
-    text-decoration-color: #000000;
-
-    .dark & {
-      color: #ffffff;
-      text-decoration-color: #ffffff;
-    }
+    background: var(--inverse-bg);
+    border-color: var(--ink);
+    color: var(--inverse-fg);
   }
 
   @media (min-width: 768px) {
-    font-size: 1.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
   }
 }
 
-/* 项目卡片网格 */
-/* 加载中 / 空数据提示 */
-.grid-tip {
-  padding: 4rem 0;
-  text-align: center;
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: #9ca3af;
-}
-
+/* ---------- 网格 ---------- */
 .project-grid {
   display: grid;
   grid-template-columns: 1fr;
-  column-gap: 1.5rem;
-  row-gap: 3rem;
+  column-gap: 1.25rem;
+  row-gap: 2.5rem;
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
 
     &.project-grid--filtered {
-      column-gap: 2rem;
-      row-gap: 4rem;
+      column-gap: 1.75rem;
+      row-gap: 3rem;
     }
   }
 
   @media (min-width: 1024px) {
     &.project-grid--all {
       grid-template-columns: repeat(4, 1fr);
+      column-gap: 1.5rem;
     }
 
     &.project-grid--filtered {
@@ -447,76 +395,88 @@ function nextImage() {
   flex-direction: column;
   height: 100%;
   cursor: pointer;
-  transform: translate3d(0, 0, 0);
+  animation: fadeUp 0.6s var(--ease-out) both;
 
   &.project-card--dev {
-    padding: 2rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 1rem;
-    background: #f3f4f6;
-    transition: all 0.3s;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    transition: border-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
 
     &:hover {
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-      transform: translateY(-0.5rem);
+      border-color: var(--ink);
+      transform: translateY(-4px);
     }
 
-    .dark & {
-      background: rgba(17, 24, 39, 0.5);
-      border-color: #1f2937;
+    @media (min-width: 768px) {
+      padding: 1.75rem;
     }
   }
 }
 
-/* 开发类卡片 */
+/* ---------- 开发类卡片 ---------- */
 .dev-inner {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
+.dev-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
 .dev-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 4rem;
-  height: 4rem;
-  margin-bottom: 1.5rem;
-  border-radius: 1rem;
-  background: #ffffff;
-  color: #000000;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-xs);
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
 
-  .dark & {
-    background: #000000;
-    color: #ffffff;
+  @media (min-width: 768px) {
+    width: 3.5rem;
+    height: 3.5rem;
   }
 }
 
-.dev-title {
-  margin: 0 0 0.75rem;
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: #000000;
+.dev-index {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--fg-faint);
+}
 
-  .dark & {
-    color: #ffffff;
+.dev-title {
+  margin: 0 0 0.625rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  color: var(--fg);
+
+  @media (min-width: 768px) {
+    font-size: 1.375rem;
   }
 }
 
 .dev-desc {
   margin: 0 0 1.5rem;
-  font-size: 1rem;
-  line-height: 1.625;
-  color: #6b7280;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--fg-muted);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-
-  .dark & {
-    color: #9ca3af;
-  }
 }
 
 .dev-footer {
@@ -526,38 +486,30 @@ function nextImage() {
   width: 100%;
   margin-top: auto;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-
-  .dark & {
-    border-color: #1f2937;
-  }
+  border-top: 1px dashed var(--border);
 }
 
 .dev-subtitle {
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #9ca3af;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
 }
 
 .dev-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
-  border-radius: 9999px;
-  background: #000000;
-  color: #ffffff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
   opacity: 0;
-  transform: translateX(0.5rem);
-  transition: all 0.3s;
-
-  .dark & {
-    background: #ffffff;
-    color: #000000;
-  }
+  transform: translateX(6px);
+  transition: all var(--dur) var(--ease-out);
 
   .project-card:hover & {
     opacity: 1;
@@ -565,30 +517,20 @@ function nextImage() {
   }
 }
 
-/* 封面图区域 */
+/* ---------- 封面区 ---------- */
 .cover-wrap {
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.875rem;
   overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid transparent;
-  background: #f3f4f6;
-  transform: translate3d(0, 0, 0);
-  transition: all 0.5s;
-
-  .dark & {
-    background: #1f2937;
-  }
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  transition: border-color var(--dur) var(--ease-out);
 
   .project-card:hover & {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  }
-
-  .dark .project-card:hover & {
-    box-shadow: none;
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--ink);
   }
 }
 
@@ -596,7 +538,7 @@ function nextImage() {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.7s;
+  transition: transform 0.7s var(--ease-out);
   will-change: transform;
 
   .project-card:hover & {
@@ -610,19 +552,11 @@ function nextImage() {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f3f4f6;
-  transition: background-color 0.3s;
-
-  .dark & {
-    background: #1f2937;
-  }
+  background: var(--surface-sunken);
+  transition: background-color var(--dur) var(--ease-out);
 
   .project-card:hover & {
-    background: #e5e7eb;
-  }
-
-  .dark .project-card:hover & {
-    background: #374151;
+    background: var(--border-soft);
   }
 }
 
@@ -630,21 +564,19 @@ function nextImage() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .play-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 4rem;
-  height: 4rem;
-  border-radius: 9999px;
-  background: #ff6699;
-  color: #ffffff;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  transform: scale(1);
-  transition: transform 0.3s;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  transition: transform var(--dur) var(--ease-out);
 
   .project-card:hover & {
     transform: scale(1.1);
@@ -652,21 +584,18 @@ function nextImage() {
 }
 
 .play-icon {
-  width: 2rem;
-  height: 2rem;
-  margin-left: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-left: 0.1875rem;
 }
 
 .play-label {
-  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #6b7280;
-
-  .dark & {
-    color: #9ca3af;
-  }
+  letter-spacing: 0.14em;
+  color: var(--fg-muted);
 }
 
 .cover-placeholder {
@@ -675,255 +604,161 @@ function nextImage() {
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 2rem;
+  padding: 1.5rem;
   text-align: center;
-  background: #e5e7eb;
-
-  .dark & {
-    background: #1f2937;
-  }
+  background: var(--surface-sunken);
 }
 
 .placeholder-title {
   margin: 0 0 0.5rem;
-  font-weight: 900;
-  line-height: 1.25;
-  color: #9ca3af;
-
-  .dark & {
-    color: #4b5563;
-  }
-
-  @media (min-width: 768px) {
-    margin-bottom: 0.75rem;
-  }
-
-  &.placeholder-title--all {
-    font-size: 1.25rem;
-
-    @media (min-width: 768px) {
-      font-size: 1.5rem;
-    }
-  }
-
-  &.placeholder-title--filtered {
-    font-size: 1.5rem;
-
-    @media (min-width: 768px) {
-      font-size: 1.875rem;
-    }
-  }
-}
-
-.placeholder-subtitle {
+  font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 400;
-  opacity: 0.7;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  color: var(--fg-faint);
 
   @media (min-width: 768px) {
-    font-size: 1.25rem;
+    font-size: 1.375rem;
   }
 }
 
 .preview-badge {
   display: inline-block;
-  margin-top: 1rem;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 9999px;
-  font-family: monospace;
-  font-size: 0.75rem;
+  margin: 0;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #9ca3af;
-
-  .dark & {
-    border-color: #374151;
-    color: #9ca3af;
-  }
+  letter-spacing: 0.12em;
+  color: var(--fg-faint);
 }
 
+/* 左上角分类角标 */
 .cover-tag {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.1875rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-radius: 0.5rem;
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid transparent;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-
-  .dark & {
-    background: #000000;
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.1);
-  }
+  letter-spacing: 0.1em;
+  border-radius: var(--radius-xs);
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
 
   @media (min-width: 768px) {
-    top: 1.5rem;
-    left: 1.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.625rem;
   }
 }
 
-/* 标题 + 描述信息区 */
+/* 右下角序号 */
+.cover-index {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+
+  @media (min-width: 768px) {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.6875rem;
+  }
+}
+
+/* ---------- 卡片文字 ---------- */
 .card-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   margin-top: auto;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid #f3f4f6;
-  transition: border-color 0.3s;
-
-  .dark & {
-    border-color: #1f2937;
-  }
-
-  .project-card:hover & {
-    border-color: #000000;
-  }
-
-  .dark .project-card:hover & {
-    border-color: #ffffff;
-  }
 }
 
-.card-info-text {
-  padding-right: 1rem;
-
-  @media (min-width: 768px) {
-    padding-right: 2rem;
-  }
-}
-
+/* hover 时标题下方扫过强调色下划线 */
 .card-title {
-  margin: 0 0 0.5rem;
+  position: relative;
+  display: inline;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
   font-weight: 900;
-  line-height: 1.25;
-  color: #000000;
-  transition: color 0.3s;
-
-  .dark & {
-    color: #ffffff;
-  }
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+  color: var(--fg);
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0 2px;
+  transition: background-size var(--dur) var(--ease-out);
 
   .project-card:hover & {
-    color: #1f2937;
-  }
-
-  .dark .project-card:hover & {
-    color: #e5e7eb;
+    background-size: 100% 2px;
   }
 
   @media (min-width: 768px) {
-    margin-bottom: 0.75rem;
-  }
-
-  &.card-title--all {
     font-size: 1.25rem;
-
-    @media (min-width: 768px) {
-      font-size: 1.5rem;
-    }
-  }
-
-  &.card-title--filtered {
-    font-size: 1.5rem;
-
-    @media (min-width: 768px) {
-      font-size: 2.25rem;
-    }
   }
 }
 
 .card-desc {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.625;
-  color: #6b7280;
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--fg-muted);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-
-  .dark & {
-    color: #9ca3af;
-  }
-
-  @media (min-width: 768px) {
-    font-size: 1.125rem;
-  }
-}
-
-.card-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0.5rem;
-  border-radius: 9999px;
-  background: #000000;
-  color: #ffffff;
-  opacity: 0;
-  transform: translateY(1rem);
-  transition: all 0.3s;
-
-  .dark & {
-    background: #ffffff;
-    color: #000000;
-  }
-
-  .project-card:hover & {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  @media (min-width: 768px) {
-    padding: 0.75rem;
-  }
 }
 
 .tag-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
 
   @media (min-width: 768px) {
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 }
 
 .card-tag {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  font-family: monospace;
-  font-size: 10px;
+  padding: 0.1875rem 0.4375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #9ca3af;
-
-  .dark & {
-    border-color: #1f2937;
-    color: #6b7280;
-  }
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
 
   @media (min-width: 768px) {
-    font-size: 0.75rem;
+    font-size: 0.625rem;
   }
 }
 
-/* 灯箱 */
+/* ---------- 提示 ---------- */
+.grid-tip {
+  padding: 4rem 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+/* ---------- 灯箱 ---------- */
 .lightbox-overlay {
   position: fixed;
   inset: 0;
@@ -932,7 +767,7 @@ function nextImage() {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.92);
 
   @media (min-width: 768px) {
     padding: 3rem;
@@ -954,8 +789,7 @@ function nextImage() {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 0.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-xs);
   user-select: none;
 }
 
@@ -966,67 +800,58 @@ function nextImage() {
   padding: 0.5rem;
   border: none;
   background: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
-  transition: color 0.3s;
+  transition: color var(--dur-fast) var(--ease-out);
 
   &:hover {
-    color: #ffffff;
+    color: #fff;
   }
 
   @media (min-width: 768px) {
     top: 0;
     right: 0;
-    margin-top: -3rem;
-    margin-right: -3rem;
+    margin-top: -2.5rem;
+    margin-right: -2.5rem;
+  }
+}
+
+.lightbox-prev,
+.lightbox-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+
+  &:hover {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  @media (min-width: 768px) {
+    background: transparent;
   }
 }
 
 .lightbox-prev {
-  position: absolute;
   left: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0.5rem;
-  border: none;
-  border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.2);
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: color 0.3s, background-color 0.3s;
-
-  &:hover {
-    color: #ffffff;
-    background: rgba(0, 0, 0, 0.4);
-  }
 
   @media (min-width: 768px) {
-    left: -4rem;
-    background: transparent;
+    left: -3.5rem;
   }
 }
 
 .lightbox-next {
-  position: absolute;
   right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0.5rem;
-  border: none;
-  border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.2);
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: color 0.3s, background-color 0.3s;
-
-  &:hover {
-    color: #ffffff;
-    background: rgba(0, 0, 0, 0.4);
-  }
 
   @media (min-width: 768px) {
-    right: -4rem;
-    background: transparent;
+    right: -3.5rem;
   }
 }
 
@@ -1036,10 +861,12 @@ function nextImage() {
   left: 50%;
   transform: translateX(-50%);
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-xs);
   background: rgba(0, 0, 0, 0.5);
-  font-family: monospace;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.75);
 }
 </style>

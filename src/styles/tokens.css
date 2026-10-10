@@ -1,0 +1,78 @@
+/* 设计令牌层：全站唯一的颜色 / 字体 / 间距 / 动效来源。
+   语义令牌（--bg / --fg / --border ...）在 .dark 下整体翻转，
+   组件只消费语义令牌，不再出现硬编码色值。 */
+
+:root {
+  color-scheme: light;
+
+  /* 原始色板 · 墨与朱 */
+  --paper: #fafaf7;
+  --paper-raised: #ffffff;
+  --paper-sunken: #f1efe9;
+  --ink: #111110;
+  --ink-muted: #6e6b64;
+  --ink-faint: #a8a49a;
+  --line: #e3e1da;
+  --line-soft: #efede7;
+  --accent: #ff4a1c;
+  --accent-fg: #c8370f;
+  --accent-wash: #ffede7;
+
+  /* 语义令牌 */
+  --bg: var(--paper);
+  --surface: var(--paper-raised);
+  --surface-sunken: var(--paper-sunken);
+  --fg: var(--ink);
+  --fg-muted: var(--ink-muted);
+  --fg-faint: var(--ink-faint);
+  --border: var(--line);
+  --border-soft: var(--line-soft);
+  --accent-text: var(--accent-fg);
+  --inverse-bg: var(--ink);
+  --inverse-fg: var(--paper);
+
+  /* 字体：不引入外部 webfont，优先本机 OPPO Sans / JetBrains Mono，逐级回落系统字体 */
+  --font-display: 'OPPO Sans', 'HarmonyOS Sans SC', 'PingFang SC', 'Source Han Sans SC',
+    'Noto Sans CJK SC', 'Microsoft YaHei', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'OPPO Sans', 'HarmonyOS Sans SC', 'PingFang SC', 'Source Han Sans SC',
+    'Noto Sans CJK SC', 'Microsoft YaHei', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono', ui-monospace, 'SF Mono',
+    Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  /* 版式尺度 */
+  --container: 1320px;
+  --gutter: 1.25rem;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  /* 动效 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 0.18s;
+  --dur: 0.32s;
+  --dur-slow: 0.7s;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gutter: 2.5rem;
+  }
+}
+
+.dark {
+  color-scheme: dark;
+
+  --paper: #0c0c0d;
+  --paper-raised: #151517;
+  --paper-sunken: #1c1c1f;
+  --ink: #f2f0ea;
+  --ink-muted: #9a968e;
+  --ink-faint: #5c5c62;
+  --line: #2a2a2c;
+  --line-soft: #1f1f22;
+  --accent: #ff6a3d;
+  --accent-fg: #ff8a63;
+  --accent-wash: #2a1510;
+}
