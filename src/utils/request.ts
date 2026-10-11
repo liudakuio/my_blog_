@@ -35,6 +35,7 @@ service.interceptors.response.use(
     if (res.code !== undefined && res.code !== 200) {
       if (res.code === 401) {
         handleUnauthorized()
+        ElMessage.error(res.msg || '未登录或登录已失效')
         return Promise.reject(new Error(res.msg || '未登录或登录已失效'))
       }
       ElMessage.error(res.msg || '请求失败')
@@ -45,11 +46,12 @@ service.interceptors.response.use(
   },
   (error) => {
     const status = error?.response?.status
+    const msg = error?.response?.data?.msg
     if (status === 401) {
       handleUnauthorized()
-    } else {
-      ElMessage.error(error?.message || '网络错误')
     }
+    // 401 同样要提示（登录失败常见），否则登录页会静默失败
+    ElMessage.error(msg || error?.message || '网络错误')
     return Promise.reject(error)
   }
 )
@@ -97,8 +99,12 @@ requestRaw.interceptors.response.use(
   },
   (error) => {
     const status = error?.response?.status
-    if (status === 401) handleUnauthorized()
-    else ElMessage.error(error?.message || '网络错误')
+    const msg = error?.response?.data?.msg
+    if (status === 401) {
+      handleUnauthorized()
+    }
+    // 401（含登录失败）也要把后端的 msg 提示出来；非 401 走网络错误兜底
+    ElMessage.error(msg || error?.message || '网络错误')
     return Promise.reject(error)
   }
 )

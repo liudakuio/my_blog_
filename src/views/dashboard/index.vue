@@ -94,11 +94,6 @@
 
       <PortfolioGrid :external-filter="portfolioCategory" />
     </div>
-
-    <!-- 点击无分类标题时的提示 -->
-    <transition name="toast">
-      <div v-if="showToast" class="toast">{{ toastText }}</div>
-    </transition>
   </div>
 </template>
 
@@ -137,7 +132,7 @@ const HOME_DATA: Record<Language, HomeContent> = {
     heroItems: [
       { text: '软件开发', annotation: '（目前主业）', category: Category.DEV },
       { text: '嵌入式开发', annotation: '（想学习）', category: Category.DESIGN },
-      { text: '做饭', annotation: '（还在学）', category: null }
+      { text: '做饭', annotation: '（简单的）', category: null }
     ],
     intro: '', selectedWorks: '精选作品', years: '[ 2024 — 2026 ]'
   },
@@ -147,7 +142,7 @@ const HOME_DATA: Record<Language, HomeContent> = {
       { text: 'Embedded dev', annotation: '(I want to learn)', category: Category.DESIGN },
       { text: 'Cooking', annotation: '(Still Learning)', category: null }
     ],
-    intro: '', selectedWorks: 'Selected Works', years: '[ 20XX — 20XX ]'
+    intro: '', selectedWorks: 'Selected Works', years: '[ 2024 — 2026 ]'
   }
 }
 
@@ -187,11 +182,6 @@ const tooltipText = computed(() =>
   (appStore.language === 'zh'
     ? '我在郑州，可以交个朋友哦！'
     : "I'm in Zhengzhou. Would you like to make friends with me?")
-)
-
-// 无分类标题的提示文案
-const toastText = computed(() =>
-  appStore.language === 'zh' ? '这一项还没有作品 :)' : 'No works in this category yet :)'
 )
 
 // 判断是否为"摄影摄像"标题（需拆分为两个可点击区域）

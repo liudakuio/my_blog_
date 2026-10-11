@@ -23,14 +23,9 @@
         </transition>
       </router-view>
 
-      <!-- 页脚：大字行动号召 + 邮箱 + mono 元信息 -->
+      <!-- 页脚：mono 元信息 -->
       <footer class="footer">
         <div class="u-container">
-          <div class="footer-cta">
-            <p class="footer-eyebrow">{{ appStore.language === 'zh' ? '聊聊？' : 'Say hello' }}</p>
-            <a class="footer-mail" :href="`mailto:${email}`">{{ email }}</a>
-          </div>
-
           <div class="footer-meta">
             <span>&copy; {{ year }} 刘中魁</span>
             <span class="footer-stack">VUE 3 &middot; VITE &middot; ELEMENT PLUS</span>
@@ -46,17 +41,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useAppStore } from '@/store/app'
 import SidebarNav from './components/SidebarNav.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import DailyEnglish from '@/components/DailyEnglish.vue'
 
 const appStore = useAppStore()
-
-// 页脚邮箱：中英文站点共用一个联系入口
-const EMAIL = 'liudakuio@gmail.com'
-const email = computed(() => EMAIL)
 const year = new Date().getFullYear()
 
 // 回到顶部：尊重减弱动效偏好，直接跳转
@@ -104,40 +94,6 @@ function scrollTop() {
   @media (min-width: 1024px) {
     margin-top: 10rem;
     padding-top: 5.5rem;
-  }
-}
-
-.footer-cta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 3.5rem;
-}
-
-.footer-eyebrow {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--accent-text);
-}
-
-/* 邮箱做成超链接大字，是页脚的视觉重心 */
-.footer-mail {
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 7vw, 5rem);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  word-break: break-all;
-  color: var(--fg);
-  text-decoration: none;
-  transition: color var(--dur-fast) var(--ease-out);
-
-  &:hover {
-    color: var(--accent-text);
   }
 }
 

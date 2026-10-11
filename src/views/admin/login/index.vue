@@ -76,7 +76,8 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     router.push('/admin')
   } catch (e) {
-    // 错误信息已由响应拦截器提示
+    // 鉴权失败 / 网络异常已由 request.ts 响应拦截器统一提示，这里仅做静默兜底
+    console.error('登录失败:', e)
   } finally {
     loading.value = false
   }

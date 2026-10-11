@@ -25,8 +25,8 @@ import { useAppStore } from '@/store/app'
 const appStore = useAppStore()
 
 const ITEMS = [
-  'VUE 3', 'TYPESCRIPT', 'ELEMENT PLUS', 'VITE', 'PINIA', 'NODE.JS',
-  'MYSQL', 'EXPRESS', 'STM32', 'C / RTOS', 'FIGMA', 'TAILWIND',
+  'VUE 3', 'JAVA', 'ELEMENT PLUS', 'VITE', 'PINIA', 'NODE.JS',
+  'MYSQL', 'EXPRESS', 'STM32', 'SPRING BOOT', 'REDIS', 'PostgreSQL',
   'GIT', 'DOCKER', 'PYTHON', 'REST API'
 ]
 
