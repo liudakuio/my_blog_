@@ -26,20 +26,6 @@
       </div>
     </header>
 
-    <!-- 主联系：邮箱大块 -->
-    <section class="mail-block">
-      <div class="mail-block__label">{{ content.emailMeLabel }}</div>
-      <a class="mail-block__value" :href="`mailto:${content.email}`">{{ content.email }}</a>
-      <div class="mail-block__actions">
-        <button class="ct-btn" type="button" @click="copyMail">
-          {{ copied ? (appStore.language === 'zh' ? '已复制' : 'COPIED') : (appStore.language === 'zh' ? '复制' : 'COPY') }}
-        </button>
-        <a class="ct-btn ct-btn--solid" :href="`mailto:${content.email}`">
-          {{ appStore.language === 'zh' ? '发邮件' : 'SEND' }} →
-        </a>
-      </div>
-    </section>
-
     <!-- 社交平台卡片网格 -->
     <div class="social-grid">
       <!-- 01 微信：点击复制微信号 -->
@@ -113,14 +99,14 @@ interface ContactContent {
 const CONTACT_DATA: Record<Language, ContactContent> = {
   zh: {
     baseLabel: 'BASE', locationValue: '河南 郑州', contactLabel: '取得联系', emailMeLabel: '邮箱',
-    email: 'liudakuio@gmail.com', hello: '你好 :-)', intro: '欢迎探讨与合作。',
+    email: 'liudakuio@gmail.com', hello: '你好 :-)', intro: '我可以为您的企业打造专业官网，助力品牌展示与业务发展。同时，也欢迎随时与我联系，让我们一起探索创意、交流想法，打造更多有趣又有价值的项目！',
     socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
     githubLabel: 'Gitee'
   },
   en: {
     baseLabel: 'BASE', locationValue: 'HENAN ZHENGZHOU', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
-    email: '1365693530@qq.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
-    socials: { wechat: 'YourWeChatID', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
+    email: 'liudakuio@gmail.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
+    socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
     githubLabel: 'Gitee'
   }
 }
