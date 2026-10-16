@@ -112,8 +112,8 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="icon" label="图标" width="110" show-overflow-tooltip />
-        <el-table-column prop="bilibiliId" label="B站ID" width="120" show-overflow-tooltip />
+        <el-table-column prop="title" label="标题" width="110" show-overflow-tooltip />
+        <el-table-column prop="tags" label="标签" width="120" show-overflow-tooltip />
         <el-table-column label="视频" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
             <a v-if="row.videoUrl" :href="row.videoUrl" target="_blank" class="cell-link">

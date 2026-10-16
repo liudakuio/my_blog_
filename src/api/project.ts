@@ -25,3 +25,11 @@ export function getProjectDetail(id: string, lang: LangParam = 'all') {
 export function getProjectCategories(lang: LangParam = 'all') {
   return service.get<CategoryVo[], CategoryVo[]>('/api/project-categories', { params: { lang } })
 }
+
+/** GET /api/projects/gallery?title=xxx —— 同一标题下的所有作品，cover 即图集图片 */
+export function getProjectGallery(title: string, lang: LangParam = 'all') {
+  return service.get<ProjectVo[], ProjectVo[]>('/api/projects/gallery', {
+    params: { title, lang }
+  })
+}
+

@@ -23,7 +23,7 @@
       </button>
     </div>
 
-    <!-- 项目卡片网格："全部"时4列，筛选分类时3列 -->
+    <!-- 项目卡片网格-->
     <div
       class="project-grid"
       :class="filter === 'All' ? 'project-grid--all' : 'project-grid--filtered'"
@@ -253,14 +253,18 @@ async function openProjectDetail(project: Project) {
   isModalRendered.value = true
   document.body.style.overflow = 'hidden'
 
-  const needGallery = (project.common.galleryCount ?? 0) > 0 && !project.common.gallery?.length
-  if (!needGallery) return
+  // 同一标题的多行记录，每行 cover 即一张图，聚合后作为图集
+  const images = await portfolioStore.fetchGalleryByTitle(projectContent(project).title)
+  if (!images.length) return
 
-  const detail = await portfolioStore.fetchDetail(project.id)
-  if (!detail) return
+  // 仅在仍是同一项目时回填，避免快速连续点击导致数据串台
   if (displayProject.value?.id === project.id) {
-    displayProject.value = detail
-    selectedProject.value = detail
+    const next: Project = {
+      ...project,
+      common: { ...project.common, gallery: images, galleryCount: images.length }
+    }
+    displayProject.value = next
+    selectedProject.value = next
   }
 }
 

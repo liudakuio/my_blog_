@@ -130,17 +130,17 @@ interface ContactContent {
 const HOME_DATA: Record<Language, HomeContent> = {
   zh: {
     heroItems: [
-      { text: '软件开发', annotation: '（目前主业）', category: Category.DEV },
-      { text: '嵌入式开发', annotation: '（想学习）', category: Category.DESIGN },
-      { text: '做饭', annotation: '（简单的）', category: null }
+      { text: 'MES系统开发', annotation: '（目前主业）', category: Category.DEV },
+      { text: '嵌入式爱好者', annotation: '（想学习）', category: Category.DESIGN },
+      { text: 'A股大韭菜', annotation: '（😊）', category: null }
     ],
     intro: '', selectedWorks: '精选作品', years: '[ 2024 — 2026 ]'
   },
   en: {
     heroItems: [
-      { text: 'Software Dev', annotation: '(Current main work)', category: Category.DEV },
-      { text: 'Embedded dev', annotation: '(I want to learn)', category: Category.DESIGN },
-      { text: 'Cooking', annotation: '(Still Learning)', category: null }
+      { text: 'MES Dev', annotation: '(Current main work)', category: Category.DEV },
+      { text: 'Embedded Geek', annotation: '(I want to learn)', category: Category.DESIGN },
+      { text: 'A-Share Bagholder', annotation: '(😊)', category: null }
     ],
     intro: '', selectedWorks: 'Selected Works', years: '[ 2024 — 2026 ]'
   }
@@ -148,15 +148,15 @@ const HOME_DATA: Record<Language, HomeContent> = {
 
 const CONTACT_DATA: Record<Language, ContactContent> = {
   zh: {
-    baseLabel: 'BASE', locationValue: '河南 郑州', contactLabel: '取得联系', emailMeLabel: '邮箱',
+    baseLabel: 'BASE', locationValue: '阿联酋 阿曼', contactLabel: '取得联系', emailMeLabel: '邮箱',
     email: 'liudakuio@gmail.com', hello: '你好 :-)', intro: '欢迎探讨与合作。',
     socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
     githubLabel: 'Gitee'
   },
   en: {
-    baseLabel: 'BASE', locationValue: 'HENAN ZHENGZHOU', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
-    email: '1365693530@qq.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
-    socials: { wechat: 'YourWeChatID', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
+    baseLabel: 'BASE', locationValue: 'Oman', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
+    email: 'liudakuio@gmail.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
+    socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
     githubLabel: 'Gitee'
   }
 }
@@ -174,14 +174,14 @@ const heroItems = computed(() => content.value.heroItems || [])
 const showToast = ref(false)
 
 // 状态卡上的实时文案
-const statusText = computed(() => (appStore.language === 'zh' ? '可接洽' : 'Open to work'))
+const statusText = computed(() => (appStore.language === 'zh' ? '无聊中' : 'Open to work'))
 
 // 所在地说明文案
 const tooltipText = computed(() =>
   contactContent.value.tooltip ||
   (appStore.language === 'zh'
-    ? '我在郑州，可以交个朋友哦！'
-    : "I'm in Zhengzhou. Would you like to make friends with me?")
+    ? '我在阿联酋-阿曼，可以交个朋友哦！'
+    : "I'm in Oman. Would you like to make friends with me?")
 )
 
 // 判断是否为"摄影摄像"标题（需拆分为两个可点击区域）
@@ -325,11 +325,11 @@ function handleHeadlineClick(item: HeroItem) {
   transition: color var(--dur) var(--ease-out);
 
   &.hero-title--zh {
-    font-size: clamp(2.5rem, 11vw, 7rem);
+    font-size: clamp(2.5rem, 5vw, 7rem);
   }
 
   &.hero-title--en {
-    font-size: clamp(1.75rem, 7vw, 4.5rem);
+    font-size: clamp(1rem, 5vw, 4.5rem);
   }
 }
 

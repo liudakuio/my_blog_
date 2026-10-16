@@ -9,6 +9,7 @@
       <div
         class="modal-panel"
         :class="visible ? 'animate-message-pop' : 'animate-message-pop-out'"
+        @click.stop
       >
         <button class="modal-close" @click="$emit('close')">
           <el-icon :size="24" class="modal-close-icon"><Close /></el-icon>

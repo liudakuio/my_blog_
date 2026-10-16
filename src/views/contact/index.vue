@@ -21,7 +21,7 @@
         <span>{{ content.locationValue }}</span>
         <span class="meta-sep">/</span>
         <span class="meta-live">
-          <i class="live-dot"></i>{{ appStore.language === 'zh' ? '可接洽' : 'AVAILABLE' }}
+          <i class="live-dot"></i>{{ appStore.language === 'zh' ? '无聊中' : 'AVAILABLE' }}
         </span>
       </div>
     </header>
@@ -98,13 +98,13 @@ interface ContactContent {
 
 const CONTACT_DATA: Record<Language, ContactContent> = {
   zh: {
-    baseLabel: 'BASE', locationValue: '河南 郑州', contactLabel: '取得联系', emailMeLabel: '邮箱',
+    baseLabel: 'BASE', locationValue: '阿联酋 阿曼', contactLabel: '取得联系', emailMeLabel: '邮箱',
     email: 'liudakuio@gmail.com', hello: '你好 :-)', intro: '我可以为您的企业打造专业官网，助力品牌展示与业务发展。同时，也欢迎随时与我联系，让我们一起探索创意、交流想法，打造更多有趣又有价值的项目！',
     socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
     githubLabel: 'Gitee'
   },
   en: {
-    baseLabel: 'BASE', locationValue: 'HENAN ZHENGZHOU', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
+    baseLabel: 'BASE', locationValue: 'Oman', contactLabel: 'Get in touch', emailMeLabel: 'Email Me',
     email: 'liudakuio@gmail.com', hello: 'Hello :-)', intro: 'Welcome to discuss & cooperate.',
     socials: { wechat: 'vv8886666999', xiaohongshu: 'YourID', bilibili: 'YourID', px500: 'YourID' },
     githubLabel: 'Gitee'

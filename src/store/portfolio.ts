@@ -8,7 +8,7 @@
 // 依赖后端：/api/projects 需支持 category 查询参数（不传则视为全部）。
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getProjectList, getProjectDetail, getProjectCategories } from '@/api'
+import { getProjectList, getProjectDetail, getProjectCategories,getProjectGallery } from '@/api'
 import type { CategoryVo, ProjectVo } from '@/api/types'
 import type { Project } from '@/types'
 
@@ -71,6 +71,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
    * @param force 是否强制请求。loaded 为去重标记，切换分类必须传 true，
    *              否则第二次调用会被直接跳过、列表不刷新。
    * 失败兜底：列表置空（错误提示由请求拦截器统一弹出）。
+   * 返回的是group by title.以标题分组的
    */
   async function loadProjects(force = false) {
     if (loaded.value && !force) return
@@ -120,6 +121,18 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
   }
 
+  /** 按标题拉取图集：同标题多行记录的 cover 即为图片列表 */
+async function fetchGalleryByTitle(title: string): Promise<string[]> {
+  if (!title) return []
+  try {
+    const list = await getProjectGallery(title)
+    return (list ?? []).map(vo => vo.cover).filter(Boolean) as string[]
+  } catch {
+    return []
+  }
+}
+
+
   return {
     projects,
     categories,
@@ -130,6 +143,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     loadProjects,
     loadCategories,
     setCategory,
-    fetchDetail
+    fetchDetail,
+    fetchGalleryByTitle
   }
 })
