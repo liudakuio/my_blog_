@@ -221,7 +221,7 @@
         <el-divider content-position="left">正文内容</el-divider>
         <MdEditor
           v-model="form.content"
-          :theme="mdTheme"
+          :theme="mdTheme"  
           :height="mdHeight"
           :preview="true"
           :on-upload-img="onUploadImg"
