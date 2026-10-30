@@ -14,17 +14,17 @@
     <!-- 搜索区 -->
     <div v-show="showSearch" class="search-card">
       <el-form :model="queryParams" inline @submit.prevent>
+        <el-form-item label="标题">
+          <el-input v-model="queryParams.title" placeholder="筛选标题" clearable style="width: 180px"
+            @keyup.enter="handleQuery" />
+        </el-form-item>
         <el-form-item label="分类">
-          <el-input
-            v-model="queryParams.category"
-            placeholder="请输入分类"
-            clearable
-            style="width: 180px"
-            @keyup.enter="handleQuery"
-          />
+          <el-select v-model="queryParams.category" placeholder="筛选分类" clearable style="width: 180px">
+            <el-option v-for="o in CATEGORY_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="状态" clearable style="width: 180px">
+          <el-select v-model="queryParams.status" placeholder="筛选状态" clearable style="width: 180px">
             <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
@@ -40,24 +40,12 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <el-button v-if="editable" type="primary" :icon="Plus" @click="handleAdd">新增</el-button>
-          <el-button
-            v-if="editable"
-            type="success"
-            plain
-            :icon="Edit"
-            :disabled="selection.length !== 1"
-            @click="handleUpdate()"
-          >
+          <el-button v-if="editable" type="success" plain :icon="Edit" :disabled="selection.length !== 1"
+            @click="handleUpdate()">
             修改
           </el-button>
-          <el-button
-            v-if="editable"
-            type="danger"
-            plain
-            :icon="Delete"
-            :disabled="selection.length === 0"
-            @click="handleDelete()"
-          >
+          <el-button v-if="editable" type="danger" plain :icon="Delete" :disabled="selection.length === 0"
+            @click="handleDelete()">
             删除
           </el-button>
         </div>
@@ -72,43 +60,28 @@
           </el-tooltip>
           <el-tooltip content="刷新" placement="top">
             <button class="icon-btn" @click="getList">
-              <el-icon><Refresh /></el-icon>
+              <el-icon>
+                <Refresh />
+              </el-icon>
             </button>
           </el-tooltip>
           <span class="total-text">共 {{ total }} 条</span>
         </div>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        border
-        stripe
-        row-key="id"
-        @selection-change="handleSelectionChange"
-      >
+      <el-table v-loading="loading" :data="list" border stripe row-key="id" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column prop="category" label="分类" width="120" show-overflow-tooltip />
+        <el-table-column prop="title" label="标题" width="180" show-overflow-tooltip />
+        <el-table-column prop="category" label="分类" width="180" show-overflow-tooltip />
         <el-table-column label="封面" width="90" align="center">
           <template #default="{ row }">
-            <el-image
-              v-if="row.coverImage"
-              :src="row.coverImage"
-              fit="cover"
-              class="thumb"
-              :preview-src-list="[row.coverImage]"
-              preview-teleported
-            />
+            <el-image v-if="row.coverImage" :src="row.coverImage" fit="cover" class="thumb"
+              :preview-src-list="[row.coverImage]" preview-teleported />
             <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="publishDate" label="发布日期" width="120" align="center" />
-        <el-table-column label="外链" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">
-            <a v-if="row.link" :href="row.link" target="_blank" class="cell-link">{{ row.link }}</a>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="100" show-overflow-tooltip />
         <el-table-column prop="sort" label="排序" width="80" align="center" />
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
@@ -127,118 +100,89 @@
     </div>
 
     <!-- 添加 / 修改弹窗（正文为 Markdown，使用全屏弹窗） -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="1080px"
-      fullscreen
-      append-to-body
-      :close-on-click-modal="false"
-      destroy-on-close
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="1080px" fullscreen append-to-body
+      :close-on-click-modal="false" destroy-on-close>
       <el-form ref="formRef" :model="form" label-width="96px" :rules="rules">
         <el-row :gutter="16">
-          <el-col :span="8">
+          <el-col :span="6">
+            <el-form-item label="标题" prop="title">
+              <el-input v-model="form.title" placeholder="标题名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="分类" prop="category">
               <el-input v-model="form.category" placeholder="如 notes" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="发布日期" prop="publishDate">
-              <el-date-picker
-                v-model="form.publishDate"
-                type="date"
-                value-format="YYYY-MM-DD"
-                placeholder="选择日期"
-                class="w-full"
-              />
+              <el-date-picker v-model="form.publishDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"
+                class="w-full" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="排序" prop="sort">
               <el-input-number v-model="form.sort" :controls="false" class="w-full" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="状态" prop="status">
               <el-select v-model="form.status" class="w-full">
                 <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="封面" prop="coverImage">
-              <div class="image-upload">
-                <el-image
-                  v-if="form.coverImage"
-                  :src="form.coverImage"
-                  fit="cover"
-                  class="iu-thumb"
-                  :preview-src-list="[form.coverImage]"
-                  preview-teleported
-                />
-                <div v-else class="iu-empty">
-                  <el-icon><Picture /></el-icon>
-                  <span>未上传</span>
-                </div>
-                <p v-if="uploadError" class="iu-error">{{ uploadError }}</p>
-                <el-upload
-                  :show-file-list="false"
-                  :accept="ACCEPT"
-                  :disabled="!canUpload"
-                  :before-upload="beforeUpload"
-                  :http-request="handleUpload"
-                >
-                  <el-button type="primary" size="small" :loading="uploading" :disabled="!canUpload">
-                    {{ form.coverImage ? '重新上传' : '上传图片' }}
-                  </el-button>
-                </el-upload>
-                <el-button
-                  v-if="form.coverImage"
-                  size="small"
-                  type="danger"
-                  plain
-                  :disabled="!canUpload"
-                  @click="form.coverImage = ''"
-                >
-                  移除
-                </el-button>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
+          <el-col :span="6">
             <el-form-item label="外链" prop="link">
               <el-input v-model="form.link" placeholder="https://（可选）" />
             </el-form-item>
           </el-col>
-          <el-col :span="24">
+          <el-col :span="8">
             <el-form-item label="备注" prop="remark">
               <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="内部备注" />
             </el-form-item>
           </el-col>
+          <el-col :span="4">
+            <el-form-item label="封面" prop="coverImage">
+              <div class="image-upload">
+                <el-image v-if="form.coverImage" :src="form.coverImage" fit="cover" class="iu-thumb"
+                  :preview-src-list="[form.coverImage]" preview-teleported />
+                <div v-else class="iu-empty">
+                  <el-icon>
+                    <Picture />
+                  </el-icon>
+                  <span>未上传</span>
+                </div>
+                <p v-if="uploadError" class="iu-error">{{ uploadError }}</p>
+                <el-upload :show-file-list="false" :accept="ACCEPT" :disabled="!canUpload" :before-upload="beforeUpload"
+                  :http-request="handleUpload">
+                  <el-button type="primary" size="small" :loading="uploading" :disabled="!canUpload">
+                    {{ form.coverImage ? '重新上传' : '上传图片' }}
+                  </el-button>
+                  <el-button v-if="form.coverImage" size="small" type="danger" plain :disabled="!form.coverImage"
+                    @click="form.coverImage = ''">
+                    移除
+                  </el-button>
+                </el-upload>
+
+              </div>
+            </el-form-item>
+          </el-col>
+
         </el-row>
 
         <el-divider content-position="left">正文内容</el-divider>
-         <!-- 导入 Markdown：本地读取 .md 文件写入正文（不上传服务器），导入后可继续编辑 -->
+        <!-- 导入 Markdown：本地读取 .md 文件写入正文（不上传服务器），导入后可继续编辑 -->
         <div class="content-import">
-          <el-upload
-            :show-file-list="false"
-            accept=".md,.markdown,text/markdown,text/plain"
-            :before-upload="handleImportMd"
-          >
+          <el-upload :show-file-list="false" accept=".md,.markdown,text/markdown,text/plain"
+            :before-upload="handleImportMd">
             <el-button size="small" :icon="Document">导入 .md</el-button>
           </el-upload>
           <span class="content-import-tip">从本地 Markdown 文件导入正文，可继续编辑</span>
         </div>
-        <MdEditor
-          v-model="form.content"
-          :theme="mdTheme"
-          :height="mdHeight"
-          :preview="true"
-          :on-upload-img="onUploadImg"
-          :no-upload-img="!canUpload"
-        />
-        </el-form>
+        <MdEditor v-model="form.content" :theme="mdTheme" :height="mdHeight" :preview="true"
+          :on-upload-img="onUploadImg" :no-upload-img="!canUpload" />
+      </el-form>
       <template #footer>
         <el-button @click="cancel">取 消</el-button>
         <el-button type="primary" :loading="saving" @click="submitForm">确 定</el-button>
@@ -291,6 +235,8 @@ const STATUS_OPTIONS = [
   { label: '停用', value: '1' }
 ]
 
+const CATEGORY_OPTIONS = []
+
 // ---------------- 列表 ----------------
 const list = ref<any[]>([])
 const loading = ref(false)
@@ -298,7 +244,7 @@ const total = ref(0)
 const selection = ref<any[]>([])
 const showSearch = ref(true)
 
-const queryParams = reactive<Record<string, any>>({ id: '', category: '', status: '' })
+const queryParams = reactive<Record<string, any>>({ id: '', title: '', category: '', status: '' })
 
 /**
  * 拉取 article 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
@@ -353,6 +299,7 @@ const isEdit = computed(() => editingId.value !== null)
 
 const defaultForm = () => ({
   id: '',
+  title: '',
   category: '',
   link: '',
   coverImage: '',
@@ -365,7 +312,8 @@ const defaultForm = () => ({
 const form = reactive(defaultForm())
 
 const rules = {
-  category: [{ required: true, message: '分类不能为空', trigger: 'blur' }]
+  category: [{ required: true, message: '分类不能为空', trigger: 'blur' }],
+  title: [{ required: true, message: '标题不能为空', trigger: 'blur' }]
 }
 
 /** 打开新增弹窗：editingId 置空表示新增，表单回填默认值 */
