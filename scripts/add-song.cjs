@@ -9,7 +9,9 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-// 歌单已由后端 DB 维护（GET /api/music/playlist），这里输出可直接执行的 SQL
+// 歌单数据存在后端 DB（blog_music 表），这里输出可直接执行的 SQL；
+// 前台歌单目前是本地写死的（src/components/MusicPlayer.vue 的 MUSIC_PLAYLIST），
+// 后端并未提供 /api/music/playlist 接口
 const SEED_FILE_PATH = path.join(__dirname, 'song-seed.sql');
 
 console.log('🎵 网易云音乐链接解析工具');

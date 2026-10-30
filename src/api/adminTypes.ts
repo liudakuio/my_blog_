@@ -1,24 +1,24 @@
-// 后台 5 个「专用接口」资源的类型化 VO（字段驼峰）。
-// 字段与约束详见《后台专用接口说明》第二节。
-// 通用 CRUD 资源返回下划线列名，不走这里的类型。
-// 保留说明：这 5 个 VO 目前仅被 AdminVoMap 引用（页面侧统一 as any），
-// 但它们是 adminResourceList/Get/Create/Update 的返回类型推导锚点，
-// 后续若要给后台页面补齐类型，直接 import 这里即可，故不删除。
-// 变更记录：education_text 已随后端下线移除（含其 VO 与 AdminVoMap key）。
-
-/** 站点全局配置（KV 文案） */
-export interface AdminSiteTextVo {
-  id: number
-  configKey: string
-  valueZh?: string
-  valueEn?: string
-  remark?: string
-}
+// 后台「走专用接口」资源的类型化 VO（字段驼峰）。
+// 事实依据：后端为 project / project_category / article / article_category 四个资源
+//   各自实现了独立 Controller（AdminProjectController / AdminProjectCategoryController /
+//   AdminArticleController / AdminArticleCategoryController），出入参是类型化 VO、字段驼峰，
+//   本文件的定义与后端 VO 字段一一对应。
+// 与通用 CRUD 的分工：通用 CRUD（见 admin.ts，后端 AdminController）仍然存在，
+//   但只覆盖后端 TableRegistry 白名单内的少数资源，出入参是 Map、key 必须是下划线列名；
+//   走通用接口的资源不在本文件定义类型。
+// 被谁引用：adminResource.ts（列表 / 详情 / 增删改的返回类型推导锚点）、
+//   views/admin/content/ 下的 project / projectCategory / article / articleCategory 四个页面。
+// 维护注意：新增走专用接口的资源时，需同时在后端新增专用 Controller，
+//   并在 AdminVoMap 与 adminResource.ts 的 DEDICATED_RESOURCES 中同步登记（两者必须完全一致）。
+// 变更记录：site_text 已随后端下线移除（后端无 site_text 表 / VO / Controller，
+//   原先它被误列为专用资源，调用只会返回 400「未知资源」）。
 
 /** 作品 */
 export interface AdminProjectVo {
   id: string
   category: string
+  /** 分类中文名（后端联表带出，非表字段） */
+  categoryValue?: string
   cover?: string
   icon?: string
   videoUrl?: string
@@ -46,9 +46,10 @@ export interface AdminProjectCategoryVo {
   status?: string
 }
 
-/** 文章（主表，不含正文；正文在 article_i18n 维护） */
+/** 文章（主表，不含多语正文；多语在 article_i18n 维护） */
 export interface AdminArticleVo {
   id: string
+  title?: string
   category: string
   link?: string
   coverImage?: string
@@ -78,17 +79,16 @@ export interface AdminArticleCategoryVo {
   status?: string
 }
 
-/** 资源名 -> VO 类型映射（music / social 的专用接口已由后端移除，走通用 CRUD） */
+/** 走专用接口的资源名 -> VO 类型映射（key 必须与 adminResource.ts 的 DEDICATED_RESOURCES 完全一致） */
 export interface AdminVoMap {
-  site_text: AdminSiteTextVo
   project: AdminProjectVo
   project_category: AdminProjectCategoryVo
   article: AdminArticleVo
   article_category: AdminArticleCategoryVo
 }
 
-/** 新增 / 修改入参：字段可选；PUT 时 null 表示「不更新」 */
+/** 新增 / 修改入参：字段可选；未提交（null）的字段在修改时保持原值 */
 export type AdminSaveVo<T> = Partial<T>
 
-/** 列表筛选入参：按字段等值筛选 */
+/** 列表筛选入参：各资源支持的可查询字段见后端对应的 Query 类 */
 export type AdminQuery<T> = Partial<T>

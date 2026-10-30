@@ -1,11 +1,12 @@
-// 8 个后台资源的字段配置：驱动通用 CRUD 的表格列与表单控件。
+// 通用 CRUD 兜底页的字段配置：**只登记走通用接口的资源**（出入参字段为下划线列名）。
+// 走专用接口的资源（project / project_category / article / article_category）
+//   字段为驼峰 VO，由各自独立页面自持表单与表格，不在此配置。
 // 字段类型：text / textarea / number / select / image / link / markdown / datetime
-// 变更记录：project_i18n / project_tag / project_award / project_gallery 以及
-// 教育、竞赛相关资源已随后端下线移除。
 // 被谁引用：crud/index.vue 通过下面的 SCHEMA_MAP[route.meta.resource] 取配置渲染页面。
-// 注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走通用 CRUD 页，
-// 已拆分独立页面的资源（如 project / article）不读这里的配置，改字段要改对应页面。
-// 字段的 key 必须与后端列名一致（通用接口用下划线，专用接口用驼峰）。
+// 注意：已登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源会走独立页面，不读这里的配置；
+//   这里只服务于「后端新下发、前端尚未做独立页面」的资源兜底。
+// 变更记录：site_text、hero 已随前端页面一同移除（后端无对应资源，调用只会得到 400「未知资源」）；
+//   4 个走专用接口的资源的字段块也已移除，避免与各自独立页面重复维护。
 import type { FieldSchema, ResourceSchema } from './types'
 
 // 字段构造器（默认表格与表单均展示）
@@ -17,10 +18,6 @@ const f = (
 ): FieldSchema => ({ key, label, type, table: true, form: true, ...extra })
 
 // 通用选项
-const STATUS = [
-  { label: '正常', value: '0' },
-  { label: '停用', value: '1' }
-]
 const LANG = [
   { label: '中文', value: 'zh' },
   { label: '英文', value: 'en' }
@@ -28,23 +25,8 @@ const LANG = [
 // 自动主键（自增）资源：id 不在表单
 const autoId = () => f('id', 'ID', 'text', { form: false, width: 70 })
 
-// 字符串主键资源：id 需在表单填写
-const strId = () => f('id', 'ID', 'text', { required: true, width: 140 })
-
 export const RESOURCE_SCHEMAS: ResourceSchema[] = [
-  // 1 站点文案
-  {
-    resource: 'site_text',
-    title: '站点文案',
-    fields: [
-      autoId(),
-      f('configKey', '配置键', 'text', { required: true }),
-      f('valueZh', '中文值', 'textarea'),
-      f('valueEn', '英文值', 'textarea'),
-      f('remark', '备注', 'text', { table: false })
-    ]
-  },
-  // 2 导航菜单
+  // 1 导航菜单（走通用接口，字段为下划线列名）
   {
     resource: 'nav',
     title: '导航菜单',
@@ -56,84 +38,7 @@ export const RESOURCE_SCHEMAS: ResourceSchema[] = [
       f('sort', '排序', 'number', { width: 90 })
     ]
   },
-  // 3 Hero 大标题
-  {
-    resource: 'hero',
-    title: '首页 Banner',
-    fields: [
-      autoId(),
-      f('text_zh', '中文标题', 'text'),
-      f('text_en', '英文标题', 'text'),
-      f('annotation_zh', '中文注解', 'textarea'),
-      f('annotation_en', '英文注解', 'textarea'),
-      f('category', '分类', 'text', { width: 120 }),
-      f('sort', '排序', 'number', { width: 90 })
-    ]
-  },
-  // 4 作品分类
-  {
-    resource: 'project_category',
-    title: '作品分类',
-    fields: [
-      autoId(),
-      f('categoryValue', '分类值', 'text', { required: true }),
-      f('labelZh', '中文名', 'text'),
-      f('labelEn', '英文名', 'text'),
-      f('sort', '排序', 'number', { width: 90 }),
-      f('status', '状态', 'select', { options: STATUS, width: 90 })
-    ]
-  },
-  // 5 作品
-  {
-    resource: 'project',
-    title: '作品列表',
-    fields: [
-      strId(),
-      f('category', '分类', 'text', { width: 120 }),
-      f('cover', '封面', 'image', { table: true, form: true, width: 90 }),
-      f('icon', '图标', 'text', { table: false }),
-      f('videoUrl', '视频', 'link', { table: false }),
-      f('bilibiliId', 'B站ID', 'text', { table: false }),
-      f('figmaUrl', 'Figma', 'link', { table: false }),
-      f('websiteUrl', '官网', 'link', { table: false }),
-      f('githubUrl', 'GitHub', 'link', { table: false }),
-      f('sort', '排序', 'number', { width: 90 }),
-      f('status', '状态', 'select', { options: STATUS, width: 90 }),
-      f('remark', '备注', 'textarea', { table: false })
-    ]
-  },
-  // 6 文章分类
-  {
-    resource: 'article_category',
-    title: '文章分类',
-    fields: [
-      autoId(),
-      f('categoryValue', '分类值', 'text', { required: true }),
-      f('labelZh', '中文名', 'text'),
-      f('labelEn', '英文名', 'text'),
-      f('shortLabelZh', '短标签(中)', 'text', { table: false }),
-      f('shortLabelEn', '短标签(英)', 'text', { table: false }),
-      f('sort', '排序', 'number', { width: 90 }),
-      f('status', '状态', 'select', { options: STATUS, width: 90 })
-    ]
-  },
-  // 7 文章
-  {
-    resource: 'article',
-    title: '文章列表',
-    fields: [
-      { ...strId(), section: '基础信息' },
-      f('category', '分类', 'text', { width: 120, section: '基础信息' }),
-      f('link', '链接', 'link', { table: false, section: '基础信息' }),
-      f('coverImage', '封面', 'image', { width: 90, section: '基础信息' }),
-      f('publishDate', '发布日期', 'date', { width: 170, section: '基础信息' }),
-      f('sort', '排序', 'number', { width: 90, section: '基础信息' }),
-      f('status', '状态', 'select', { options: STATUS, width: 90, section: '基础信息' }),
-      f('remark', '备注', 'textarea', { table: false, section: '基础信息' }),
-      f('content', '正文', 'markdown', { table: false, form: true, section: '正文内容' })
-    ]
-  },
-  // 8 文章多语
+  // 2 文章多语（走通用接口，字段为下划线列名）
   {
     resource: 'article_i18n',
     title: '文章多语',

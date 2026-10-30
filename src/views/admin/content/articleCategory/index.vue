@@ -1,13 +1,15 @@
 <!--
-  文章分类（/api/admin/article_category，专用接口驼峰 VO）
+  文章分类（/api/admin/article_category，后端专用接口，字段驼峰）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
   数据来源：@/api/adminResource 的 adminResourceList / adminResourceGet /
     adminResourceCreate / adminResourceUpdate / adminResourceDelete（专用接口，字段名驼峰）
+  筛选说明：后端该接口仅支持 status 筛选（后端 AdminArticleCategoryQuery 只有这一个字段），
+    且列表全量返回、无分页；因此「分类值」「中文名」两个输入框改为前端本地过滤，不额外发请求。
   引用关系：本文件不被任何模块静态 import，而是由 src/config/adminPages.ts 的 CONTENT_PAGES
     依据后端菜单 perms 推导出的 resource 名动态匹配后，经 router 的 lazy import 加载；
     请勿因「无静态 import」误判为孤儿文件而删除。
   编辑权限：editable = userStore.canEdit('article_category')，即需 blog:article_category:edit 权限。
-  字段约定：表单字段与后端 article_category 表列名一一对应。
+  字段约定：表单字段与后端 AdminArticleCategoryVo 一一对应（id 由 URL 决定，不进表单）。
 -->
 <template>
   <div class="app-container">
@@ -179,6 +181,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance } from 'element-plus'
 import {
   ArrowDown,
   ArrowUp,
@@ -196,6 +199,7 @@ import {
   adminResourceUpdate,
   adminResourceDelete
 } from '@/api/adminResource'
+import type { AdminArticleCategoryVo, AdminSaveVo } from '@/api/adminTypes'
 
 const userStore = useUserStore()
 const editable = computed(() => userStore.canEdit('article_category'))
@@ -204,34 +208,47 @@ const STATUS_OPTIONS = [
   { label: '正常', value: '0' },
   { label: '停用', value: '1' }
 ]
+
+/** 表单模型：字段集与后端 AdminArticleCategoryVo 一致（id 由 URL 决定，不进表单） */
+interface CategoryForm {
+  categoryValue: string
+  labelZh: string
+  labelEn: string
+  shortLabelZh: string
+  shortLabelEn: string
+  sort: number
+  status: string
+}
+
 // ---------------- 列表 ----------------
-const list = ref<any[]>([])
+const list = ref<AdminArticleCategoryVo[]>([])
 const loading = ref(false)
 const total = ref(0)
-const selection = ref<any[]>([])
+const selection = ref<AdminArticleCategoryVo[]>([])
 const showSearch = ref(true)
 
-const queryParams = reactive<Record<string, any>>({
+/** 查询条件：status 走后端筛选；categoryValue / labelZh 由前端本地过滤（后端不识别） */
+const queryParams = reactive({
   categoryValue: '',
   labelZh: '',
   status: ''
 })
 
 /**
- * 拉取 article_category 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
- * 后端为全量返回（非分页），故 total 直接取列表长度。
+ * 拉取 article_category 列表。
+ * 后端专用接口仅支持 status 筛选（后端 AdminArticleCategoryQuery 只有 status 一个字段），
+ * 分类值 / 中文名 透传给后端会被静默忽略，故这里只下发 status，其余在本地过滤。
+ * 后端为全量返回（非分页），total 取过滤后的条数。
  * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
  */
 async function getList() {
   loading.value = true
   try {
     const params: Record<string, any> = {}
-    Object.keys(queryParams).forEach((k) => {
-      const v = queryParams[k]
-      if (v !== '' && v !== undefined && v !== null) params[k] = v
-    })
+    if (queryParams.status !== '') params.status = queryParams.status
     const data = await adminResourceList('article_category', params)
-    list.value = Array.isArray(data) ? data : []
+    const rows: AdminArticleCategoryVo[] = Array.isArray(data) ? data : []
+    list.value = rows.filter(matchLocalFilter)
     total.value = list.value.length
   } catch (e) {
     console.error('[admin] 文章分类列表加载失败', e)
@@ -242,6 +259,15 @@ async function getList() {
   }
 }
 
+/** 本地过滤：分类值 / 中文名（模糊匹配，后端不支持这两个查询参数） */
+function matchLocalFilter(row: AdminArticleCategoryVo) {
+  const categoryValue = queryParams.categoryValue.trim()
+  if (categoryValue && !String(row.categoryValue ?? '').includes(categoryValue)) return false
+  const labelZh = queryParams.labelZh.trim()
+  if (labelZh && !String(row.labelZh ?? '').includes(labelZh)) return false
+  return true
+}
+
 /** 按当前查询条件重新拉取列表（搜索按钮 / 输入框回车触发） */
 function handleQuery() {
   getList()
@@ -249,14 +275,14 @@ function handleQuery() {
 
 /** 清空全部查询条件后重新拉取列表 */
 function resetQuery() {
-  Object.keys(queryParams).forEach((k) => {
-    queryParams[k] = ''
-  })
+  queryParams.categoryValue = ''
+  queryParams.labelZh = ''
+  queryParams.status = ''
   getList()
 }
 
 /** 记录表格多选结果，供批量修改 / 批量删除使用 */
-function handleSelectionChange(rows: any[]) {
+function handleSelectionChange(rows: AdminArticleCategoryVo[]) {
   selection.value = rows
 }
 
@@ -264,19 +290,19 @@ function handleSelectionChange(rows: any[]) {
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const saving = ref(false)
-const formRef = ref<any>(null)
-const editingId = ref<string | number | null>(null)
+const formRef = ref<FormInstance>()
+const editingId = ref<number | null>(null)
 
-const defaultForm = () => ({
-    categoryValue: '',
-    labelZh: '',
-    labelEn: '',
-    shortLabelZh: '',
-    shortLabelEn: '',
-    sort: 0,
-    status: '0'
+const defaultForm = (): CategoryForm => ({
+  categoryValue: '',
+  labelZh: '',
+  labelEn: '',
+  shortLabelZh: '',
+  shortLabelEn: '',
+  sort: 0,
+  status: '0'
 })
-const form = reactive(defaultForm())
+const form = reactive<CategoryForm>(defaultForm())
 
 const rules = {
   categoryValue: [{ required: true, message: '分类值不能为空', trigger: 'blur' }]
@@ -286,7 +312,7 @@ const rules = {
 function handleAdd() {
   editingId.value = null
   dialogTitle.value = '添加文章分类'
-  Object.assign(form, defaultForm())
+  fillForm(defaultForm())
   dialogVisible.value = true
 }
 
@@ -295,19 +321,31 @@ function handleAdd() {
  * 先用行数据填充表单，再拉详情覆盖（保证字段为最新）；
  * 详情请求失败不阻塞，仅打印日志并沿用行数据兜底。
  */
-async function handleUpdate(row?: any) {
+async function handleUpdate(row?: AdminArticleCategoryVo) {
   const target = row ?? selection.value[0]
   if (!target) return
   editingId.value = target.id
   dialogTitle.value = '修改文章分类'
-  Object.assign(form, defaultForm(), target)
+  fillForm(target)
   try {
-    const detail: any = await adminResourceGet('article_category', target.id)
-    if (detail) Object.assign(form, detail)
+    const detail = await adminResourceGet('article_category', target.id)
+    if (detail) fillForm(detail)
   } catch (e) {
     console.error('[admin] 文章分类详情加载失败，使用行数据兜底', e)
   }
   dialogVisible.value = true
+}
+
+/** 用给定数据填充表单：只取表单字段，避免把 id 之类写进表单 */
+function fillForm(source: Partial<CategoryForm>) {
+  const d = defaultForm()
+  form.categoryValue = source.categoryValue ?? d.categoryValue
+  form.labelZh = source.labelZh ?? d.labelZh
+  form.labelEn = source.labelEn ?? d.labelEn
+  form.shortLabelZh = source.shortLabelZh ?? d.shortLabelZh
+  form.shortLabelEn = source.shortLabelEn ?? d.shortLabelEn
+  form.sort = source.sort ?? d.sort
+  form.status = source.status ?? d.status
 }
 
 /** 关闭弹窗，不保存任何修改 */
@@ -318,21 +356,14 @@ function cancel() {
 /**
  * 提交表单：先做表单校验，校验失败直接返回；
  * 再按 editingId 是否为空区分「修改」与「新增」；
- * 成功后关闭弹窗并刷新列表。
+ * 入参直接由表单模型派生（字段集与后端 VO 一致），成功后关闭弹窗并刷新列表。
  */
 async function submitForm() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   saving.value = true
   try {
-    const payload: Record<string, any> = {}
-    payload.categoryValue = form.categoryValue
-    payload.labelZh = form.labelZh
-    payload.labelEn = form.labelEn
-    payload.shortLabelZh = form.shortLabelZh
-    payload.shortLabelEn = form.shortLabelEn
-    payload.sort = form.sort
-    payload.status = form.status
+    const payload: AdminSaveVo<AdminArticleCategoryVo> = { ...form }
     if (editingId.value !== null) {
       await adminResourceUpdate('article_category', editingId.value, payload)
       ElMessage.success('修改成功')
@@ -354,7 +385,7 @@ async function submitForm() {
  * 删除：传入行时删该行，否则批量删除选中行；
  * 先弹二次确认（用户取消则直接返回），再用 Promise.allSettled 并发删除并统计成功 / 失败条数。
  */
-async function handleDelete(row?: any) {
+async function handleDelete(row?: AdminArticleCategoryVo) {
   const rows = row ? [row] : selection.value
   if (!rows.length) return
   const ok = await ElMessageBox.confirm(
@@ -367,10 +398,10 @@ async function handleDelete(row?: any) {
   if (!ok) return
 
   const results = await Promise.allSettled(
-    rows.map((r: any) => adminResourceDelete('article_category', r.id))
+    rows.map((r) => adminResourceDelete('article_category', r.id))
   )
-  const failed = results.filter((r) => r.status === 'rejected')
-  failed.forEach((r: any) => console.error('[admin] 文章分类删除失败', r.reason))
+  const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+  failed.forEach((r) => console.error('[admin] 文章分类删除失败', r.reason))
   if (failed.length) {
     ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
   } else {

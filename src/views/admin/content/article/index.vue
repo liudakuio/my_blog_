@@ -1,13 +1,15 @@
 <!--
-  文章列表（/api/admin/article，专用接口驼峰 VO；正文为 Markdown）
+  文章列表（/api/admin/article，后端专用接口，字段驼峰；正文为 Markdown）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
   数据来源：@/api/adminResource 的 adminResourceList / adminResourceGet /
     adminResourceCreate / adminResourceUpdate / adminResourceDelete（专用接口，字段名驼峰）
+  筛选说明：后端该接口支持 title、category、status 三个查询字段，
+    其中 title 与 category 是 LIKE 模糊匹配、status 是等值匹配；列表全量返回、无分页。
   引用关系：本文件不被任何模块静态 import，而是由 src/config/adminPages.ts 的 CONTENT_PAGES
     依据后端菜单 perms 推导出的 resource 名动态匹配后，经 router 的 lazy import 加载；
     请勿因「无静态 import」误判为孤儿文件而删除。
   编辑权限：editable = userStore.canEdit('article')，即需 blog:article:edit 权限。
-  字段约定：表单字段与后端 article 表列名一一对应。
+  字段约定：表单字段与后端 AdminArticleVo 一一对应。
 -->
 <template>
   <div class="app-container">
@@ -235,7 +237,25 @@ const STATUS_OPTIONS = [
   { label: '停用', value: '1' }
 ]
 
-const CATEGORY_OPTIONS = []
+/** 分类下拉：来自 /api/admin/article_category（后端专用接口，字段驼峰） */
+interface CategoryOption {
+  value: string
+  label: string
+}
+const CATEGORY_OPTIONS = ref<CategoryOption[]>([])
+
+async function loadCategoryOptions() {
+  try {
+    const data = await adminResourceList('article_category')
+    CATEGORY_OPTIONS.value = (Array.isArray(data) ? data : []).map((c) => ({
+      value: c.categoryValue,
+      label: c.labelZh ? `${c.labelZh}（${c.categoryValue}）` : c.categoryValue
+    }))
+  } catch (e) {
+    console.error('[admin] 文章分类加载失败', e)
+    CATEGORY_OPTIONS.value = []
+  }
+}
 
 // ---------------- 列表 ----------------
 const list = ref<any[]>([])
@@ -244,10 +264,11 @@ const total = ref(0)
 const selection = ref<any[]>([])
 const showSearch = ref(true)
 
-const queryParams = reactive<Record<string, any>>({ id: '', title: '', category: '', status: '' })
+const queryParams = reactive<Record<string, any>>({ title: '', category: '', status: '' })
 
 /**
  * 拉取 article 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
+ * 后端仅识别 title、category、status 三个查询字段（title / category 为 LIKE 模糊匹配，status 等值）。
  * 后端为全量返回（非分页），故 total 直接取列表长度。
  * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
  */
@@ -489,7 +510,10 @@ async function handleUpload(options: UploadRequestOptions) {
   }
 }
 
-onMounted(getList)
+onMounted(() => {
+  loadCategoryOptions()
+  getList()
+})
 </script>
 
 <style lang="less" scoped>

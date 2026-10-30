@@ -81,13 +81,5 @@ export interface PageResult<T> {
   list: T[]
 }
 
-export interface SongVo {
-  id: string
-  title: string
-  artist: string
-  cover: string
-  audio: string
-}
-
 /** 接口通用的语言参数 */
 export type LangParam = Language | 'all'

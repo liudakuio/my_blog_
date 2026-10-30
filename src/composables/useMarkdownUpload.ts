@@ -7,6 +7,7 @@
 //      这里统一转成绝对地址再写库，避免正文在不同域名/子路径下丢图；
 //      代价是换域名时需要批量刷新存量正文里的图片地址。
 // 依赖：POST /api/admin/upload/image（需 blog:upload:edit 权限，由后端 JwtInterceptor 校验）。
+//      注意：该权限不在后端种子数据内（种子只按业务表生成权限），需在 sys_permission 手工插入。
 import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadImgEvent } from 'md-editor-v3'

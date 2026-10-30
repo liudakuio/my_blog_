@@ -1,8 +1,10 @@
 <!--
-  文章多语（/api/admin/article_i18n，通用接口下划线字段）
+  文章多语（/api/admin/article_i18n，后端通用 CRUD 接口，字段为下划线列名）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
   数据来源：@/api/admin 的 adminList / adminGet / adminCreate / adminUpdate /
-    adminDelete（通用接口，字段名与后端列名一致，下划线命名）
+    adminDelete（后端通用 CRUD 接口，字段名与后端列名一致，下划线命名）
+  接口说明：后端未为 article_i18n 提供专用接口，因此保留通用 CRUD 调用；
+    通用接口的出入参 key 必须是下划线列名，且列表按列等值筛选、全量返回无分页。
   引用关系：本文件不被任何模块静态 import，而是由 src/config/adminPages.ts 的 CONTENT_PAGES
     依据后端菜单 perms 推导出的 resource 名动态匹配后，经 router 的 lazy import 加载；
     请勿因「无静态 import」误判为孤儿文件而删除。

@@ -5,8 +5,8 @@
 // 后台路由不是写死的：登录后由 /api/auth/menus 返回的菜单树动态生成，见 buildDynamicRoutes。
 // 页面归属规则（改菜单前必读）：
 //   权限前缀 system: -> SYSTEM_PAGES（user / menu / role），未登记的落到 Placeholder.vue
-//   权限前缀 blog:   -> CONTENT_PAGES（config/adminPages.ts 的 8 个页面），
-//                       未登记的资源回退通用 CRUD 页 views/admin/crud/index.vue
+//   权限前缀 blog:   -> CONTENT_PAGES（config/adminPages.ts 的 6 个页面），
+//                       未登记的资源回退通用 CRUD 兜底页 views/admin/crud/index.vue
 // 因此 views/admin/content/ 与 system/ 下的页面文件都不会被静态 import，
 // 静态分析时切勿当作孤儿文件删除。
 import { createRouter, createWebHistory } from 'vue-router'
@@ -26,7 +26,7 @@ declare module 'vue-router' {
   }
 }
 
-// 由菜单 component 推导前端路由路径：blog/siteText -> /admin/siteText
+// 由菜单 component 推导前端路由路径：blog/project -> /admin/project
 function leafPath(menu: MenuItem): string {
   return '/admin/' + (menu.component || menu.path).replace(/^blog\//, '')
 }
@@ -67,7 +67,7 @@ function buildDynamicRoutes(menus: MenuItem[]): RouteRecordRaw[] {
             meta: { requiresAuth: true, title: m.menuName, resource: res, perms: m.perms, icon: m.icon }
           })
         } else {
-          // 内容资源：优先命中已拆分的独立页面，未登记的资源回退通用 CRUD 页
+          // 内容资源：优先命中已拆分的独立页面，未登记的资源回退通用 CRUD 兜底页
           const resource = resourceOf(m)
           if (resource) {
             routes.push({

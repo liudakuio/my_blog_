@@ -15,7 +15,7 @@ export default defineConfig({
     port: 9996,
     open: true,
     cors: true,
-    // 开发态将 /api 代理到后台服务（D:/lzkgit/my_blog_bak，端口 8080），
+    // 开发态将 /api 代理到后台服务（D:/lzkgit/my_blog_bak，端口 9997），
     // 复用现有 baseURL: '/api'，避免跨域凭据问题。
     proxy: {
       '/api': {

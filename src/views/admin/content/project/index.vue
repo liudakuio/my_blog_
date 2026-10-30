@@ -1,13 +1,14 @@
 <!--
-  作品列表（/api/admin/project，专用接口驼峰 VO）
+  作品列表（/api/admin/project，后端专用接口，字段驼峰）
   若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
   数据来源：@/api/adminResource 的 adminResourceList / adminResourceGet /
     adminResourceCreate / adminResourceUpdate / adminResourceDelete（专用接口，字段名驼峰）
+  筛选说明：后端该接口支持 category、status 两个查询字段（均为等值匹配）；列表全量返回、无分页。
   引用关系：本文件不被任何模块静态 import，而是由 src/config/adminPages.ts 的 CONTENT_PAGES
     依据后端菜单 perms 推导出的 resource 名动态匹配后，经 router 的 lazy import 加载；
     请勿因「无静态 import」误判为孤儿文件而删除。
   编辑权限：editable = userStore.canEdit('project')，即需 blog:project:edit 权限。
-  字段约定：表单字段与后端 project 表列名一一对应。
+  字段约定：表单字段与后端 AdminProjectVo 一一对应。
 -->
 <template>
   <div class="app-container">
@@ -329,7 +330,7 @@ const total = ref(0)
 const selection = ref<any[]>([])
 const showSearch = ref(true)
 
-const queryParams = reactive<Record<string, any>>({ id: '', category: '', status: '' })
+const queryParams = reactive<Record<string, any>>({ category: '', status: '' })
 
 // 分类下拉：来自 /api/admin/project_category
 interface CategoryOption {
@@ -353,6 +354,7 @@ async function loadCategoryOptions() {
 
 /**
  * 拉取 project 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
+ * 后端仅识别 category、status 两个查询字段（均为等值匹配）。
  * 后端为全量返回（非分页），故 total 直接取列表长度。
  * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
  */

@@ -1,9 +1,12 @@
 <!--
-  通用 CRUD 视图：由路由 meta.resource + schema 驱动
-  通用 CRUD 页：由 route.meta.resource 决定操作哪个资源，字段配置取自同目录 schema.ts 的 SCHEMA_MAP。
-  数据来源：isDedicatedResource(resource) 为真走 @/api/adminResource（驼峰字段），否则走 @/api/admin（下划线字段）。
+  通用 CRUD 兜底视图：由路由 meta.resource + schema 驱动
+  适用场景：后端下发了前端尚未做独立页面的资源，且已在 crud/schema.ts 中登记字段配置；
+    该资源还必须在后端通用 CRUD 的白名单内，否则请求会得到 400「未知资源」。
+  数据来源：isDedicatedResource(resource) 为真走 @/api/adminResource（4 个走专用接口的资源，驼峰字段），
+    否则走 @/api/admin（后端通用 CRUD，出入参为下划线列名）。
   权限：editable = userStore.canEdit(resource)，即 blog:{resource}:edit。
-  注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走本页；已拆分独立页面的资源不读这里的配置。
+  注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走本页；
+    已拆分独立页面的资源不读这里的配置；schema 未登记时页面没有表格列与表单字段。
 -->
 <template>
   <div class="crud">
@@ -277,7 +280,7 @@ async function load() {
   if (!resource.value) return
   loading.value = true
   try {
-    // 5 个专用资源走专用接口（驼峰 VO），其余走通用 CRUD（下划线）
+    // 走专用接口的 4 个资源用驼峰字段，其余走通用 CRUD 用下划线列名
     const res = resource.value
     const data: any = isDedicatedResource(res)
       ? await adminResourceList(res, buildParams())
