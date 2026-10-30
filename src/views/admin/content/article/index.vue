@@ -219,9 +219,20 @@
         </el-row>
 
         <el-divider content-position="left">正文内容</el-divider>
+         <!-- 导入 Markdown：本地读取 .md 文件写入正文（不上传服务器），导入后可继续编辑 -->
+        <div class="content-import">
+          <el-upload
+            :show-file-list="false"
+            accept=".md,.markdown,text/markdown,text/plain"
+            :before-upload="handleImportMd"
+          >
+            <el-button size="small" :icon="Document">导入 .md</el-button>
+          </el-upload>
+          <span class="content-import-tip">从本地 Markdown 文件导入正文，可继续编辑</span>
+        </div>
         <MdEditor
           v-model="form.content"
-          :theme="mdTheme"  
+          :theme="mdTheme"
           :height="mdHeight"
           :preview="true"
           :on-upload-img="onUploadImg"
@@ -244,6 +255,7 @@ import {
   ArrowDown,
   ArrowUp,
   Delete,
+  Document,
   Edit,
   Picture,
   Plus,
@@ -384,6 +396,50 @@ async function handleUpdate(row?: any) {
   dialogVisible.value = true
 }
 
+/**
+ * 导入 Markdown：本地读取 .md 文件内容写入正文，不上传服务器，导入后可继续编辑。
+ * 借助 el-upload 的 before-upload 钩子拿到原始 File，返回 false 阻止真实上传请求。
+ * 处理四件事：体积上限、去 BOM、覆盖前二次确认、非 UTF-8 编码（出现替换字符）时提示。
+ */
+async function handleImportMd(file: File): Promise<boolean> {
+  // Markdown 文件正常都很小，2MB 足够，超了直接拒绝避免误传大文件
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.error('文件超过 2MB，请检查是否选错了文件')
+    return false
+  }
+  try {
+    // File.text() 按 UTF-8 解码；去掉可能存在的 BOM
+    const raw = await file.text()
+    const text = raw.replace(/^\uFEFF/, '')
+
+    // 正文已有内容时先确认，避免误覆盖
+    if (form.content && form.content.trim()) {
+      const ok = await ElMessageBox.confirm('导入将覆盖当前正文内容，确定继续吗？', '提示', {
+        type: 'warning',
+        confirmButtonText: '覆盖导入',
+        cancelButtonText: '取消'
+      })
+        .then(() => true)
+        .catch(() => false)
+      if (!ok) return false
+    }
+
+    form.content = text
+    ElMessage.success(`已导入 ${file.name}`)
+
+    // UTF-8 解码失败会出现替换字符 U+FFFD，通常是 GBK / GB2312 编码
+    if (text.includes('\uFFFD')) {
+      ElMessage.warning('文件可能不是 UTF-8 编码，中文可能乱码，建议另存为 UTF-8 后重试')
+    }
+  } catch (e) {
+    console.error('[admin] Markdown 导入失败', e)
+    ElMessage.error('文件读取失败')
+  }
+  // 返回 false：阻止 el-upload 发起上传请求
+  return false
+}
+
+
 /** 关闭弹窗，不保存任何修改 */
 function cancel() {
   dialogVisible.value = false
@@ -494,6 +550,20 @@ onMounted(getList)
   flex-direction: column;
   gap: 12px;
 }
+
+/* 正文区：导入条 */
+.content-import {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.content-import-tip {
+  font-size: 12px;
+  color: #909399;
+}
+
 
 .search-card {
   background: #fff;
