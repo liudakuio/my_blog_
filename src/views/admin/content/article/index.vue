@@ -219,8 +219,15 @@
         </el-row>
 
         <el-divider content-position="left">正文内容</el-divider>
-        <MdEditor v-model="form.content" :theme="mdTheme" :height="mdHeight" :preview="true" />
-      </el-form>
+        <MdEditor
+          v-model="form.content"
+          :theme="mdTheme"
+          :height="mdHeight"
+          :preview="true"
+          :on-upload-img="onUploadImg"
+          :no-upload-img="!canUpload"
+        />
+        </el-form>
       <template #footer>
         <el-button @click="cancel">取 消</el-button>
         <el-button type="primary" :loading="saving" @click="submitForm">确 定</el-button>
@@ -248,6 +255,7 @@ import 'md-editor-v3/lib/style.css'
 import { useUserStore } from '@/store/user'
 import { useAppStore } from '@/store/app'
 import { adminUploadImage } from '@/api/admin'
+import { useMarkdownUpload } from '@/composables/useMarkdownUpload'
 import {
   adminResourceList,
   adminResourceGet,
@@ -259,7 +267,8 @@ import {
 const userStore = useUserStore()
 const appStore = useAppStore()
 const editable = computed(() => userStore.canEdit('article'))
-const canUpload = computed(() => userStore.hasPerm('blog:upload:edit'))
+// 正文编辑器图片上传（canUpload 继续供封面上传控件复用）
+const { canUpload, onUploadImg } = useMarkdownUpload()
 
 // Markdown 编辑器主题跟随全局深色模式
 const mdTheme = computed(() => (appStore.isDark ? 'dark' : 'light'))

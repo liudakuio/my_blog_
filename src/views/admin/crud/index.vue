@@ -154,8 +154,11 @@
                   :theme="mdTheme"
                   :height="mdHeight"
                   :preview="true"
+                  :on-upload-img="onUploadImg"
+                  :no-upload-img="!canUpload"
                   class="md-editor"
                 />
+
               </template>
               <!-- 图片：上传控件（调用后端上传接口，值统一为 /uploads 相对路径） -->
               <ImageUpload v-else-if="field.type === 'image'" v-model="formData[field.key]" />
@@ -199,6 +202,8 @@ import ImageUpload from './ImageUpload.vue'
 import type { FieldSchema } from './types'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
+import { useMarkdownUpload } from '@/composables/useMarkdownUpload'
+
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -214,6 +219,9 @@ const mdTheme = computed(() => (appStore.isDark ? 'dark' : 'light'))
 const hasMarkdown = computed(() =>
   (schema.value?.fields || []).some((f) => f.type === 'markdown')
 )
+// Markdown 编辑器图片上传（markdown 字段插入图片）
+const { canUpload, onUploadImg } = useMarkdownUpload()
+
 const dialogWidth = computed(() => (hasMarkdown.value ? '1080px' : '640px'))
 // 编辑器高度：全屏时随视口撑满，普通弹窗固定 400px
 const mdHeight = computed(() => {
