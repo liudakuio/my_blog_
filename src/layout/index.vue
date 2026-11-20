@@ -28,7 +28,8 @@
         <div class="u-container">
           <div class="footer-meta">
             <span>&copy; {{ year }} 刘中魁</span>
-            <span class="footer-stack">VUE 3 &middot; VITE &middot; ELEMENT PLUS</span>
+            <span class="footer-stack">豫ICP备2026058782号</span>
+<!--            <span class="footer-stack">VUE 3 &middot; VITE &middot; ELEMENT PLUS</span>-->
             <button class="footer-top" @click="scrollTop">
               {{ appStore.language === 'zh' ? '回到顶部' : 'Back to top' }}
               <span class="footer-top-arrow">&uarr;</span>
