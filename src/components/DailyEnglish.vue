@@ -3,6 +3,8 @@
   取句逻辑：调用第三方 API（src/api/dailyEnglish.ts），失败时回退本地句池；
     第三方接口不支持指定句子，故「换一句」按钮即重新请求一次。
   交互：朗读（Web Speech API）、复制、换一句。
+  朗读：始终朗读英文原句，不读中文释义。Chrome 会自动为 utter.lang 匹配在线英语语音；
+    Edge 需显式指定 voice，且 cancel() 后立即 speak() 会被丢弃，详见 pickVoice / speak 注释。
   布局：桌面端横向三段（标签日期 / 句子 / 操作），移动端纵向堆叠。
 -->
 <template>
@@ -61,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { useAppStore } from '@/store/app'
 import { fetchDailySentence } from '@/api/dailyEnglish'
 import type { DailySentence } from '@/data/dailyEnglish'
@@ -82,23 +84,96 @@ const LABELS = {
 }
 const labels = computed(() => LABELS[appStore.language])
 
-// 首屏拉取 API 句子（异步，不阻塞渲染）
+// 系统可用的语音列表：Edge 首次调用 getVoices() 可能为空，需等 voiceschanged 事件。
+// 必须用 shallowRef：Voice 是浏览器原生对象，若被 Vue 代理成响应式 Proxy，
+// 赋给 utter.voice 时 Edge 会因实例校验失败而静默不播放（Chrome 对此宽容）。
+const voices = shallowRef<SpeechSynthesisVoice[]>([])
+
+/** 读取当前系统语音列表 */
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return
+  voices.value = window.speechSynthesis.getVoices()
+}
+
+// 首屏拉取 API 句子 + 预热语音列表（异步，不阻塞渲染）
 onMounted(async () => {
   loadSentence()
+  if ('speechSynthesis' in window) {
+    loadVoices()
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+  }
+})
+
+onUnmounted(() => {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+  }
 })
 
 // 日期戳：本地日期，格式 2026.10.10 · SAT
 const dateStamp = computed(() => todayStamp())
 
-// 朗读：不变，朗读英文
+/**
+ * 挑选朗读语音，按可用性与可靠度排序：
+ *   本地 en-US → 本地 en-GB → 本地任意语音 → 在线 en-US → 在线 en-GB → 在线任意语音。
+ * 说明：Edge 的在线自然语音（如 Microsoft Ava Online (Natural)）通过 Web Speech API
+ *   调用时可能静默失败，因此本地语音优先；本地中文语音念英文虽发音不准，
+ *   但能稳定出声，优于在线语音无声。
+ * @returns voice 选中的语音；isEnglish 是否为英文语音
+ */
+function pickVoice(): { voice?: SpeechSynthesisVoice; isEnglish: boolean } {
+  const list = voices.value.length
+    ? voices.value
+    : (window.speechSynthesis?.getVoices() ?? [])
+  const english = list.filter((v) => v.lang.toLowerCase().startsWith('en'))
+  const isUs = (v: SpeechSynthesisVoice) => v.lang.toLowerCase() === 'en-us'
+  const isGb = (v: SpeechSynthesisVoice) => v.lang.toLowerCase() === 'en-gb'
+  const voice = english.find((v) => isUs(v) && v.localService)
+    ?? english.find((v) => isGb(v) && v.localService)
+    // 本地中文语音能稳定出声，用它念英文虽发音不准，也比在线语音静默失败强
+    ?? list.find((v) => v.localService)
+    ?? english.find((v) => isUs(v))
+    ?? english.find((v) => isGb(v))
+    ?? english[0]
+    ?? list[0]
+   return {
+    voice,
+    isEnglish: !!voice && voice.lang.toLowerCase().startsWith('en')
+  }
+}
+
+/** 朗读当前英文原句（不朗读中文释义） */
 function speak() {
-  if (!sentence.value) return
-  if (!('speechSynthesis' in window)) return
-  window.speechSynthesis.cancel()
-  const utter = new SpeechSynthesisUtterance(sentence.value.en)
-  utter.lang = 'en-US'
-  utter.rate = 0.92
-  window.speechSynthesis.speak(utter)
+  const enText = sentence.value?.en
+  if (!enText || !('speechSynthesis' in window)) return
+
+  const synth = window.speechSynthesis
+  // Edge 在异常中断后可能残留 pending / paused，直接 speak() 会被丢弃
+  if (synth.paused) synth.resume()
+
+  const { voice, isEnglish } = pickVoice()
+  // 朗读内容始终是英文原句；没有英文发音人时由系统其他语音念英文，效果可能不准
+  const utter = new SpeechSynthesisUtterance(enText)
+  if (voice) {
+    // 必须是 getVoices() 返回的原始实例（见 voices 的 shallowRef 说明），
+    // 且 lang 与 voice.lang 保持一致，Edge 才认得这个发音人。
+    utter.voice = voice
+    utter.lang = voice.lang
+  } else {
+    // 语音列表尚未加载完：保持英文配置，由浏览器自行匹配（Chrome 可正常播放）
+    utter.lang = 'en-US'
+  }
+  utter.rate = isEnglish ? 0.92 : 1
+
+  const wasSpeaking = synth.speaking || synth.pending
+  if (wasSpeaking) {
+    // Edge 的 cancel() 是异步生效的，紧接着 speak() 会被丢弃；让出一帧再朗读。
+    // 只在确实有任务需要取消时才走这条分支，避免首次点击就踩到该问题。
+    synth.cancel()
+    setTimeout(() => synth.speak(utter), 120)
+  } else {
+    synth.speak(utter)
+  }
 }
 
 /** 拉取一句话并更新展示（第三方接口失败时内部已回退本地句池） */
