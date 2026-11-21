@@ -1,6 +1,7 @@
 <!--
   文章多语（/api/admin/article_i18n，后端通用 CRUD 接口，字段为下划线列名）
-  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  结构说明：列表 / 查询 / 多选 / 弹窗 / 提交 / 删除的通用骨架由 @/composables/useAdminCrud
+    提供，本页只保留模板、表格列、搜索项、校验规则与差异配置（资源名、主键、提交字段）。
   数据来源：@/api/admin 的 adminList / adminGet / adminCreate / adminUpdate /
     adminDelete（后端通用 CRUD 接口，字段名与后端列名一致，下划线命名）
   接口说明：后端未为 article_i18n 提供专用接口，因此保留通用 CRUD 调用；
@@ -155,8 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted } from 'vue'
 import {
   ArrowDown,
   ArrowUp,
@@ -167,6 +167,7 @@ import {
   Search
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useAdminCrud } from '@/composables/useAdminCrud'
 import { adminList, adminGet, adminCreate, adminUpdate, adminDelete } from '@/api/admin'
 
 const userStore = useUserStore()
@@ -176,177 +177,74 @@ const LANG_OPTIONS = [
   { label: '中文', value: 'zh' },
   { label: '英文', value: 'en' }
 ]
-// ---------------- 列表 ----------------
-const list = ref<any[]>([])
-const loading = ref(false)
-const total = ref(0)
-const selection = ref<any[]>([])
-const showSearch = ref(true)
 
-const queryParams = reactive<Record<string, any>>({
-  article_id: '',
-  lang: '',
-  title: ''
-})
-
-/**
- * 拉取 article_i18n 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
- * 后端为全量返回（非分页），故 total 直接取列表长度。
- * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
- */
-async function getList() {
-  loading.value = true
-  try {
-    const params: Record<string, any> = {}
-    Object.keys(queryParams).forEach((k) => {
-      const v = queryParams[k]
-      if (v !== '' && v !== undefined && v !== null) params[k] = v
-    })
-    const data = await adminList('article_i18n', params)
-    list.value = Array.isArray(data) ? data : []
-    total.value = list.value.length
-  } catch (e) {
-    console.error('[admin] 文章多语列表加载失败', e)
-    list.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
+/** article_i18n 表行数据：后端通用 CRUD 返回，字段为下划线列名 */
+type ArticleI18nRow = {
+  id: string | number
+  article_id: string
+  lang: string
+  title: string
 }
 
-/** 按当前查询条件重新拉取列表（搜索按钮 / 输入框回车触发） */
-function handleQuery() {
-  getList()
+/** article_i18n 表单字段 */
+type ArticleI18nForm = {
+  article_id: string
+  lang: string
+  title: string
 }
 
-/** 清空全部查询条件后重新拉取列表 */
-function resetQuery() {
-  Object.keys(queryParams).forEach((k) => {
-    queryParams[k] = ''
-  })
-  getList()
+/** article_i18n 页查询条件 */
+type ArticleI18nQuery = {
+  article_id: string
+  lang: string
+  title: string
 }
 
-/** 记录表格多选结果，供批量修改 / 批量删除使用 */
-function handleSelectionChange(rows: any[]) {
-  selection.value = rows
-}
-
-// ---------------- 弹窗表单 ----------------
-const dialogVisible = ref(false)
-const dialogTitle = ref('')
-const saving = ref(false)
-const formRef = ref<any>(null)
-const editingId = ref<string | number | null>(null)
-
-const defaultForm = () => ({
+// CRUD 骨架由 composable 提供，本页只声明差异点：
+// 资源名 article_i18n（后端通用 CRUD，字段为下划线列名）、主键 id、默认表单与提交字段。
+const {
+  list, loading, total, selection, showSearch, queryParams,
+  dialogVisible, dialogTitle, saving, formRef, form,
+  getList, handleQuery, resetQuery, handleSelectionChange,
+  handleAdd, handleUpdate, cancel, submitForm, handleDelete
+} = useAdminCrud<ArticleI18nRow, ArticleI18nForm, ArticleI18nQuery>({
+  idField: 'id',
+  fetchList: (params) => adminList<ArticleI18nRow>('article_i18n', params),
+  fetchDetail: (id) => adminGet<ArticleI18nRow>('article_i18n', id),
+  createFn: (payload) => adminCreate<ArticleI18nRow>('article_i18n', payload),
+  updateFn: (id, payload) => adminUpdate<ArticleI18nRow>('article_i18n', id, payload),
+  deleteFn: (id) => adminDelete('article_i18n', id),
+  defaultQuery: { article_id: '', lang: '', title: '' },
+  createForm: () => ({
     article_id: '',
     lang: 'zh',
     title: ''
+  }),
+  // 提交字段：只提交 article_i18n 表的 3 个业务字段
+  buildPayload: (form) => ({
+    article_id: form.article_id,
+    lang: form.lang,
+    title: form.title
+  }),
+  titles: { add: '添加文章多语', edit: '修改文章多语' },
+  logLabel: '文章多语'
 })
-const form = reactive(defaultForm())
 
 const rules = {
   article_id: [{ required: true, message: '文章ID不能为空', trigger: 'blur' }]
-}
-
-/** 打开新增弹窗：editingId 置空表示新增，表单回填默认值 */
-function handleAdd() {
-  editingId.value = null
-  dialogTitle.value = '添加文章多语'
-  Object.assign(form, defaultForm())
-  dialogVisible.value = true
-}
-
-/**
- * 打开修改弹窗：优先使用传入行，未传则取表格选中的第一条。
- * 先用行数据填充表单，再拉详情覆盖（保证字段为最新）；
- * 详情请求失败不阻塞，仅打印日志并沿用行数据兜底。
- */
-async function handleUpdate(row?: any) {
-  const target = row ?? selection.value[0]
-  if (!target) return
-  editingId.value = target.id
-  dialogTitle.value = '修改文章多语'
-  Object.assign(form, defaultForm(), target)
-  try {
-    const detail: any = await adminGet('article_i18n', target.id)
-    if (detail) Object.assign(form, detail)
-  } catch (e) {
-    console.error('[admin] 文章多语详情加载失败，使用行数据兜底', e)
-  }
-  dialogVisible.value = true
-}
-
-/** 关闭弹窗，不保存任何修改 */
-function cancel() {
-  dialogVisible.value = false
-}
-
-/**
- * 提交表单：先做表单校验，校验失败直接返回；
- * 再按 editingId 是否为空区分「修改」与「新增」；
- * 成功后关闭弹窗并刷新列表。
- */
-async function submitForm() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  saving.value = true
-  try {
-    const payload: Record<string, any> = {}
-    payload.article_id = form.article_id
-    payload.lang = form.lang
-    payload.title = form.title
-    if (editingId.value !== null) {
-      await adminUpdate('article_i18n', editingId.value, payload)
-      ElMessage.success('修改成功')
-    } else {
-      await adminCreate('article_i18n', payload)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    getList()
-  } catch (e) {
-    console.error('[admin] 文章多语保存失败', e)
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 删除 ----------------
-/**
- * 删除：传入行时删该行，否则批量删除选中行；
- * 先弹二次确认（用户取消则直接返回），再用 Promise.allSettled 并发删除并统计成功 / 失败条数。
- */
-async function handleDelete(row?: any) {
-  const rows = row ? [row] : selection.value
-  if (!rows.length) return
-  const ok = await ElMessageBox.confirm(
-    row ? '确认删除该条数据？' : `确认删除选中的 ${rows.length} 条数据？`,
-    '提示',
-    { type: 'warning' }
-  )
-    .then(() => true)
-    .catch(() => false)
-  if (!ok) return
-
-  const results = await Promise.allSettled(
-    rows.map((r: any) => adminDelete('article_i18n', r.id))
-  )
-  const failed = results.filter((r) => r.status === 'rejected')
-  failed.forEach((r: any) => console.error('[admin] 文章多语删除失败', r.reason))
-  if (failed.length) {
-    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
-  } else {
-    ElMessage.success(`已删除 ${results.length} 条`)
-  }
-  getList()
 }
 
 onMounted(getList)
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .app-container  页面容器，纵向排列各区块
+   2) .search-card    搜索卡片
+   3) .table-card     表格卡片
+   4) .toolbar       工具栏（左侧操作区 / 右侧统计与刷新）
+   5) .icon-btn      圆形图标按钮
+   6) .w-full        表单控件占满宽度 */
 .app-container {
   display: flex;
   flex-direction: column;

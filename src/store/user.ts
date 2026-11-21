@@ -6,6 +6,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { login as loginApi, getInfo, getMenus, logout as logoutApi, type UserInfo, type MenuItem } from '@/api/auth'
 import { TOKEN_KEY } from '@/utils/request'
+import { blogEditPerm } from '@/config/permissions'
 
 export const useUserStore = defineStore('user', () => {
   // 登录令牌（持久化到 localStorage）
@@ -57,7 +58,7 @@ export const useUserStore = defineStore('user', () => {
 
   // 是否已具备某资源的编辑权限（约定 blog:{resource}:edit）
   function canEdit(resource: string) {
-    return hasPerm('blog:' + resource + ':edit')
+    return hasPerm(blogEditPerm(resource))
   }
 
   // 退出登录：调用后端（忽略异常）+ 清理本地状态并跳转登录页

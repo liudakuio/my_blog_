@@ -17,7 +17,7 @@
 
         <template v-if="project">
           <!-- 摄影类：图片画廊 -->
-          <div v-if="project.common.category === 'Photography'" class="gallery-wrap">
+          <div v-if="project.common.category === Category.PHOTO" class="gallery-wrap">
             <h2 class="gallery-title">{{ content.title }}</h2>
             <p class="gallery-subtitle">{{ content.description }}</p>
             <div class="gallery-grid">
@@ -178,6 +178,7 @@ import { computed } from 'vue'
 import { Close, Link } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import type { Project } from '@/types'
+import { Category } from '@/types'
 
 const props = defineProps<{
   visible: boolean
@@ -199,11 +200,12 @@ const content = computed<Project['zh']>(() => {
   return appStore.language === 'zh' ? props.project.zh : props.project.en
 })
 
+// 分类中文名映射；键为作品分类枚举值，与后端 /api/project-categories 的 value 一致
 const categoryLabels: Record<string, string> = {
-  'Videography': appStore.language === 'zh' ? '动态影像' : 'Videography',
-  'Graphics & UI': appStore.language === 'zh' ? '平面交互' : 'Graphics & UI',
-  'Photography': appStore.language === 'zh' ? '静态摄影' : 'Photography',
-  'Development': appStore.language === 'zh' ? '应用开发' : 'Development'
+  [Category.VIDEO]: appStore.language === 'zh' ? '动态影像' : 'Videography',
+  [Category.DESIGN]: appStore.language === 'zh' ? '平面交互' : 'Graphics & UI',
+  [Category.PHOTO]: appStore.language === 'zh' ? '静态摄影' : 'Photography',
+  [Category.DEV]: appStore.language === 'zh' ? '应用开发' : 'Development'
 }
 
 // 图集：来自作品详情接口

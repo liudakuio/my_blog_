@@ -10,7 +10,7 @@
 // 因此 views/admin/content/ 与 system/ 下的页面文件都不会被静态 import，
 // 静态分析时切勿当作孤儿文件删除。
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteRecordRaw, RouteComponent } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import type { MenuItem } from '@/api/auth'
 import { CONTENT_PAGES } from '@/config/adminPages'
@@ -27,8 +27,9 @@ declare module 'vue-router' {
 }
 
 // 由菜单 component 推导前端路由路径：blog/project -> /admin/project
+// 兜底：component 与 path 都缺失时按空串处理，避免菜单数据不完整时抛错
 function leafPath(menu: MenuItem): string {
-  return '/admin/' + (menu.component || menu.path).replace(/^blog\//, '')
+  return '/admin/' + (menu.component || menu.path || '').replace(/^blog\//, '')
 }
 
 // 由权限标识推导资源名：blog:project:edit -> project
@@ -44,7 +45,7 @@ function isSystemMenu(m: MenuItem): boolean {
 }
 
 // 已实现页面的系统资源；其余（dept / post / log）后端暂无接口与数据表，走占位页
-const SYSTEM_PAGES: Record<string, () => Promise<any>> = {
+const SYSTEM_PAGES: Record<string, () => Promise<RouteComponent>> = {
   user: () => import('@/views/admin/system/user/index.vue'),
   menu: () => import('@/views/admin/system/menu/index.vue'),
   role: () => import('@/views/admin/system/role/index.vue')
@@ -58,7 +59,7 @@ function buildDynamicRoutes(menus: MenuItem[]): RouteRecordRaw[] {
       if (m.menuType === 'C' && m.status === '0') {
         if (isSystemMenu(m)) {
           // 系统管理页：component 形如 blog/system/user -> /admin/system/user
-          const seg = (m.component || m.path).replace(/^blog\//, '')
+          const seg = (m.component || m.path || '').replace(/^blog\//, '')
           const res = seg.split('/').pop() || ''
           routes.push({
             path: seg,

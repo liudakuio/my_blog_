@@ -237,20 +237,7 @@ import {
   Mute, VideoPlay
 } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
-interface Song {
-  id: string
-  title: string
-  artist: string
-  cover: string
-  audio: string
-}
-
-const MUSIC_PLAYLIST: Song[] = [
-  { id: 'local-01', title: '主动', artist: '加木', cover: '/music/covers/pirene.jpg', audio: '/music/audio/zhudong.mp3' },
-  { id: 'local-02', title: "Pirene's Fountain", artist: 'Vallès', cover: '/music/covers/lofi.jpg', audio: '/music/audio/pirene.mp3' },
-  { id: 'local-03', title: 'Island', artist: 'Nujabes/Uyama Hiroto/Haruka Nakamura', cover: '/music/covers/island.jpg', audio: '/music/audio/island.mp3' },
-  { id: 'local-04', title: 'the updater', artist: 'TSUTCHIE', cover: '/music/covers/updater.jpg', audio: '/music/audio/updater.mp3' }
-]
+import { MUSIC_PLAYLIST } from '@/data/site'
 import ElasticSlider from './ElasticSlider.vue'
 
 const appStore = useAppStore()

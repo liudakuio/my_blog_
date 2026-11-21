@@ -85,6 +85,7 @@ async function handleLogin() {
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：登录卡片 / 标题 / 表单 / 提交按钮 / 错误提示 */
 .login-page {
   min-height: 100vh;
   display: flex;

@@ -1,7 +1,8 @@
 <!--
   角色管理（/api/system/role，主键 roleId；含菜单分配 menuIds）
-  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
   数据来源：@/api/system 的 systemRoleList / Get / Create / Update / Delete。
+  结构说明：列表 / 查询 / 多选 / 弹窗 / 提交 / 删除的通用骨架由 @/composables/useAdminCrud
+    提供，本页只保留模板、表格列、搜索项、校验规则与差异配置（主键、回填、提交字段、菜单勾选回显）。
   引用关系：由 router/index.ts 的 SYSTEM_PAGES 注册（权限前缀 system: 的菜单）。
   注意：主键为 roleId；menuIds 用于绑定该角色可访问的菜单，为空表示不调整绑定。
 -->
@@ -147,10 +148,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { ArrowDown, ArrowUp, Delete, Edit, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useAdminCrud } from '@/composables/useAdminCrud'
+import { systemEditPerm } from '@/config/permissions'
 import {
   systemRoleList,
   systemRoleGet,
@@ -159,63 +161,29 @@ import {
   systemRoleDelete,
   systemMenuList
 } from '@/api/system'
+import type { SysMenuVo, SysRoleQuery, SysRoleSaveVo, SysRoleVo } from '@/api/system'
+import type { TreeInstance } from 'element-plus'
 
 const userStore = useUserStore()
-const editable = computed(() => userStore.hasPerm('system:role:edit'))
+const editable = computed(() => userStore.hasPerm(systemEditPerm('role')))
 
 const STATUS_OPTIONS = [
   { label: '正常', value: '0' },
   { label: '停用', value: '1' }
 ]
 
-// ---------------- 列表 ----------------
-const list = ref<any[]>([])
-const loading = ref(false)
-const total = ref(0)
-const selection = ref<any[]>([])
-const showSearch = ref(true)
-
-const queryParams = reactive<Record<string, any>>({ roleKey: '', status: '' })
-
-async function getList() {
-  loading.value = true
-  try {
-    const params: Record<string, any> = {}
-    Object.keys(queryParams).forEach((k) => {
-      const v = queryParams[k]
-      if (v !== '' && v !== undefined && v !== null) params[k] = v
-    })
-    const data = await systemRoleList(params)
-    list.value = Array.isArray(data) ? data : []
-    total.value = list.value.length
-  } catch (e) {
-    console.error('[admin] 角色列表加载失败', e)
-    list.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
+/** 角色表单字段 */
+type RoleForm = {
+  roleKey: string
+  roleName: string
+  status: string
 }
 
-function handleQuery() {
-  getList()
-}
+// ---------------- 菜单树（页面特有：用于分配菜单权限） ----------------
+const menuTree = ref<SysMenuVo[]>([])
+const treeRef = ref<TreeInstance>()
 
-function resetQuery() {
-  Object.keys(queryParams).forEach((k) => {
-    queryParams[k] = ''
-  })
-  getList()
-}
-
-function handleSelectionChange(rows: any[]) {
-  selection.value = rows
-}
-
-// ---------------- 菜单树 ----------------
-const menuTree = ref<any[]>([])
-const treeRef = ref<any>(null)
-
+/** 拉取菜单树（供「上级菜单」下拉与勾选回显使用） */
 async function loadMenuTree() {
   try {
     const data = await systemMenuList({ tree: true })
@@ -230,23 +198,9 @@ async function loadMenuTree() {
 function collectMenuIds(): number[] {
   const tree = treeRef.value
   if (!tree) return []
-  const checked: number[] = tree.getCheckedKeys() ?? []
-  const half: number[] = tree.getHalfCheckedKeys?.() ?? []
+  const checked = (tree.getCheckedKeys() ?? []) as number[]
+  const half = (tree.getHalfCheckedKeys?.() ?? []) as number[]
   return Array.from(new Set([...checked, ...half]))
-}
-
-// ---------------- 弹窗表单 ----------------
-const dialogVisible = ref(false)
-const dialogTitle = ref('')
-const saving = ref(false)
-const formRef = ref<any>(null)
-const editingId = ref<string | number | null>(null)
-
-const defaultForm = () => ({ roleKey: '', roleName: '', status: '0' })
-const form = reactive(defaultForm())
-
-const rules = {
-  roleKey: [{ required: true, message: '请输入角色键', trigger: 'blur' }]
 }
 
 // 弹窗 destroy-on-close：需等树组件挂载、数据就绪后再回显勾选
@@ -257,95 +211,63 @@ async function setCheckedKeys(ids: number[]) {
   treeRef.value?.setCheckedKeys(ids, false)
 }
 
-async function handleAdd() {
-  editingId.value = null
-  dialogTitle.value = '添加角色'
-  Object.assign(form, defaultForm())
-  dialogVisible.value = true
-  await setCheckedKeys([])
-}
+// CRUD 骨架由 composable 提供，本页只声明差异点：
+// 主键 roleId、查询条件、默认表单、详情覆盖、提交字段（含菜单勾选）与删除文案。
+const {
+  list, loading, total, selection, showSearch, queryParams,
+  dialogVisible, dialogTitle, saving, formRef, form,
+  getList, handleQuery, resetQuery, handleSelectionChange,
+  handleAdd, handleUpdate, cancel, submitForm, handleDelete
+} = useAdminCrud<SysRoleVo, RoleForm, SysRoleQuery>({
+  idField: 'roleId',
+  fetchList: (params) => systemRoleList(params),
+  fetchDetail: systemRoleGet,
+  createFn: (payload) => systemRoleCreate(payload as SysRoleSaveVo),
+  updateFn: (id, payload) => systemRoleUpdate(id, payload as SysRoleSaveVo),
+  deleteFn: systemRoleDelete,
+  defaultQuery: { roleKey: '', status: '' },
+  createForm: () => ({ roleKey: '', roleName: '', status: '0' }),
+  // 详情覆盖：字段缺失时保留行数据里的值
+  applyDetail: (form, detail) => {
+    Object.assign(form, {
+      roleKey: detail.roleKey ?? form.roleKey,
+      roleName: detail.roleName ?? form.roleName,
+      status: detail.status ?? form.status
+    })
+  },
+  // 提交字段：menuIds 取自菜单树的勾选结果
+  buildPayload: (form) => ({
+    roleKey: form.roleKey,
+    roleName: form.roleName,
+    status: form.status,
+    menuIds: collectMenuIds()
+  }),
+  // 弹窗打开后回显菜单勾选：新增时清空，修改时按详情里的 menuIds 回显
+  afterOpen: async ({ isEdit, detail }) => {
+    await setCheckedKeys(isEdit ? (detail?.menuIds ?? []) : [])
+  },
+  titles: { add: '添加角色', edit: '修改角色' },
+  deleteConfirmText: (rows, isBatch) => isBatch
+    ? `确认删除选中的 ${rows.length} 条数据？`
+    : `确认删除角色「${rows[0].roleName || rows[0].roleKey}」？`,
+  logLabel: '角色'
+})
 
-async function handleUpdate(row?: any) {
-  const target = row ?? selection.value[0]
-  if (!target) return
-  editingId.value = target.roleId
-  dialogTitle.value = '修改角色'
-  Object.assign(form, defaultForm(), target)
-  let menuIds: number[] = []
-  try {
-    const detail: any = await systemRoleGet(target.roleId)
-    if (detail) {
-      form.roleKey = detail.roleKey ?? form.roleKey
-      form.roleName = detail.roleName ?? form.roleName
-      form.status = detail.status ?? form.status
-      menuIds = detail.menuIds ?? []
-    }
-  } catch (e) {
-    console.error('[admin] 角色详情加载失败，使用行数据兜底', e)
-  }
-  dialogVisible.value = true
-  await setCheckedKeys(menuIds)
-}
-
-function cancel() {
-  dialogVisible.value = false
-}
-
-async function submitForm() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  saving.value = true
-  try {
-    const payload: Record<string, any> = {
-      roleKey: form.roleKey,
-      roleName: form.roleName,
-      status: form.status,
-      menuIds: collectMenuIds()
-    }
-    if (editingId.value !== null) {
-      await systemRoleUpdate(editingId.value, payload)
-      ElMessage.success('修改成功')
-    } else {
-      await systemRoleCreate(payload)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    getList()
-  } catch (e) {
-    console.error('[admin] 角色保存失败', e)
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 删除 ----------------
-async function handleDelete(row?: any) {
-  const rows = row ? [row] : selection.value
-  if (!rows.length) return
-  const ok = await ElMessageBox.confirm(
-    row ? `确认删除角色「${row.roleName || row.roleKey}」？` : `确认删除选中的 ${rows.length} 条数据？`,
-    '提示',
-    { type: 'warning' }
-  )
-    .then(() => true)
-    .catch(() => false)
-  if (!ok) return
-
-  const results = await Promise.allSettled(rows.map((r: any) => systemRoleDelete(r.roleId)))
-  const failed = results.filter((r) => r.status === 'rejected')
-  failed.forEach((r: any) => console.error('[admin] 角色删除失败', r.reason))
-  if (failed.length) {
-    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
-  } else {
-    ElMessage.success(`已删除 ${results.length} 条`)
-  }
-  getList()
+const rules = {
+  roleKey: [{ required: true, message: '请输入角色键', trigger: 'blur' }]
 }
 
 onMounted(getList)
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .app-container  页面容器，纵向排列各区块
+   2) .search-card    搜索卡片
+   3) .table-card     表格卡片
+   4) .toolbar       工具栏（左侧操作区 / 右侧统计与刷新）
+   5) .icon-btn      圆形图标按钮
+   6) .w-full        表单控件占满宽度 */
 .app-container {
   display: flex;
   flex-direction: column;

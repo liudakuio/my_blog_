@@ -138,12 +138,8 @@ import { Filter, Calendar, ArrowUp, ArrowDown, Reading, TopRight } from '@elemen
 import { useAppStore } from '@/store/app'
 import { useArticleStore } from '@/store/articles'
 import type { Language } from '@/types'
+import type { ArticlesPageContent } from '@/data/site'
 import { pickText } from '@/utils/i18n'
-
-interface ArticlesPageContent {
-  title: string
-  description: string
-}
 
 const ARTICLES_PAGE_DATA: Record<Language, ArticlesPageContent> = {
   zh: { title: '文章', description: '个人思考、学习分享与生活记录。' },

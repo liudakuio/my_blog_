@@ -1,6 +1,7 @@
 <!--
   作品分类（/api/admin/project_category，后端专用接口，字段驼峰）
-  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  结构说明：列表 / 查询 / 多选 / 弹窗 / 提交 / 删除的通用骨架由 @/composables/useAdminCrud
+    提供，本页只保留模板、表格列、搜索项、校验规则与差异配置（主键、本地过滤规则、提交字段）。
   数据来源：@/api/adminResource 的 adminResourceList / adminResourceGet /
     adminResourceCreate / adminResourceUpdate / adminResourceDelete（专用接口，字段名驼峰）
   筛选说明：后端该接口仅支持 status 筛选（后端 AdminProjectCategoryQuery 只有这一个字段），
@@ -167,9 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance } from 'element-plus'
+import { computed, onMounted } from 'vue'
 import {
   ArrowDown,
   ArrowUp,
@@ -180,6 +179,7 @@ import {
   Search
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useAdminCrud } from '@/composables/useAdminCrud'
 import {
   adminResourceList,
   adminResourceGet,
@@ -187,7 +187,8 @@ import {
   adminResourceUpdate,
   adminResourceDelete
 } from '@/api/adminResource'
-import type { AdminProjectCategoryVo, AdminSaveVo } from '@/api/adminTypes'
+import type { AdminProjectCategoryVo } from '@/api/adminTypes'
+import { createLocalFilter } from '@/utils/list'
 
 const userStore = useUserStore()
 const editable = computed(() => userStore.canEdit('project_category'))
@@ -198,7 +199,7 @@ const STATUS_OPTIONS = [
 ]
 
 /** 表单模型：字段集与后端 AdminProjectCategoryVo 一致（id 由 URL 决定，不进表单） */
-interface CategoryForm {
+type CategoryForm = {
   categoryValue: string
   labelZh: string
   labelEn: string
@@ -206,123 +207,27 @@ interface CategoryForm {
   status: string
 }
 
-// ---------------- 列表 ----------------
-const list = ref<AdminProjectCategoryVo[]>([])
-const loading = ref(false)
-const total = ref(0)
-const selection = ref<AdminProjectCategoryVo[]>([])
-const showSearch = ref(true)
-
 /** 查询条件：status 走后端筛选；categoryValue / labelZh 由前端本地过滤（后端不识别） */
-const queryParams = reactive({
-  categoryValue: '',
-  labelZh: '',
-  status: ''
-})
+type CategoryQuery = {
+  categoryValue: string
+  labelZh: string
+  status: string
+}
 
-/**
- * 拉取 project_category 列表。
- * 后端专用接口仅支持 status 筛选（后端 AdminProjectCategoryQuery 只有 status 一个字段），
- * 分类值 / 中文名 透传给后端会被静默忽略，故这里只下发 status，其余在本地过滤。
- * 后端为全量返回（非分页），total 取过滤后的条数。
- * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
- */
-async function getList() {
-  loading.value = true
-  try {
-    const params: Record<string, any> = {}
-    if (queryParams.status !== '') params.status = queryParams.status
-    const data = await adminResourceList('project_category', params)
-    const rows: AdminProjectCategoryVo[] = Array.isArray(data) ? data : []
-    list.value = rows.filter(matchLocalFilter)
-    total.value = list.value.length
-  } catch (e) {
-    console.error('[admin] 作品分类列表加载失败', e)
-    list.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
+/** 表单默认值工厂 */
+function createDefaultForm(): CategoryForm {
+  return {
+    categoryValue: '',
+    labelZh: '',
+    labelEn: '',
+    sort: 0,
+    status: '0'
   }
-}
-
-/** 本地过滤：分类值 / 中文名（模糊匹配，后端不支持这两个查询参数） */
-function matchLocalFilter(row: AdminProjectCategoryVo) {
-  const categoryValue = queryParams.categoryValue.trim()
-  if (categoryValue && !String(row.categoryValue ?? '').includes(categoryValue)) return false
-  const labelZh = queryParams.labelZh.trim()
-  if (labelZh && !String(row.labelZh ?? '').includes(labelZh)) return false
-  return true
-}
-
-/** 按当前查询条件重新拉取列表（搜索按钮 / 输入框回车触发） */
-function handleQuery() {
-  getList()
-}
-
-/** 清空全部查询条件后重新拉取列表 */
-function resetQuery() {
-  queryParams.categoryValue = ''
-  queryParams.labelZh = ''
-  queryParams.status = ''
-  getList()
-}
-
-/** 记录表格多选结果，供批量修改 / 批量删除使用 */
-function handleSelectionChange(rows: AdminProjectCategoryVo[]) {
-  selection.value = rows
-}
-
-// ---------------- 弹窗表单 ----------------
-const dialogVisible = ref(false)
-const dialogTitle = ref('')
-const saving = ref(false)
-const formRef = ref<FormInstance>()
-const editingId = ref<number | null>(null)
-
-const defaultForm = (): CategoryForm => ({
-  categoryValue: '',
-  labelZh: '',
-  labelEn: '',
-  sort: 0,
-  status: '0'
-})
-const form = reactive<CategoryForm>(defaultForm())
-
-const rules = {
-  categoryValue: [{ required: true, message: '分类值不能为空', trigger: 'blur' }]
-}
-
-/** 打开新增弹窗：editingId 置空表示新增，表单回填默认值 */
-function handleAdd() {
-  editingId.value = null
-  dialogTitle.value = '添加作品分类'
-  fillForm(defaultForm())
-  dialogVisible.value = true
-}
-
-/**
- * 打开修改弹窗：优先使用传入行，未传则取表格选中的第一条。
- * 先用行数据填充表单，再拉详情覆盖（保证字段为最新）；
- * 详情请求失败不阻塞，仅打印日志并沿用行数据兜底。
- */
-async function handleUpdate(row?: AdminProjectCategoryVo) {
-  const target = row ?? selection.value[0]
-  if (!target) return
-  editingId.value = target.id
-  dialogTitle.value = '修改作品分类'
-  fillForm(target)
-  try {
-    const detail = await adminResourceGet('project_category', target.id)
-    if (detail) fillForm(detail)
-  } catch (e) {
-    console.error('[admin] 作品分类详情加载失败，使用行数据兜底', e)
-  }
-  dialogVisible.value = true
 }
 
 /** 用给定数据填充表单：只取表单字段，避免把 id 之类写进表单 */
-function fillForm(source: Partial<CategoryForm>) {
-  const d = defaultForm()
+function fillFormWith(form: CategoryForm, source: Partial<CategoryForm>) {
+  const d = createDefaultForm()
   form.categoryValue = source.categoryValue ?? d.categoryValue
   form.labelZh = source.labelZh ?? d.labelZh
   form.labelEn = source.labelEn ?? d.labelEn
@@ -330,72 +235,55 @@ function fillForm(source: Partial<CategoryForm>) {
   form.status = source.status ?? d.status
 }
 
-/** 关闭弹窗，不保存任何修改 */
-function cancel() {
-  dialogVisible.value = false
-}
+/** 本地过滤：分类值 / 中文名（模糊匹配，后端不支持这两个查询参数） */
+const matchLocalFilter = createLocalFilter<AdminProjectCategoryVo>(['categoryValue', 'labelZh'])
 
-/**
- * 提交表单：先做表单校验，校验失败直接返回；
- * 再按 editingId 是否为空区分「修改」与「新增」；
- * 入参直接由表单模型派生（字段集与后端 VO 一致），成功后关闭弹窗并刷新列表。
- */
-async function submitForm() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  saving.value = true
-  try {
-    const payload: AdminSaveVo<AdminProjectCategoryVo> = { ...form }
-    if (editingId.value !== null) {
-      await adminResourceUpdate('project_category', editingId.value, payload)
-      ElMessage.success('修改成功')
-    } else {
-      await adminResourceCreate('project_category', payload)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    getList()
-  } catch (e) {
-    console.error('[admin] 作品分类保存失败', e)
-  } finally {
-    saving.value = false
-  }
-}
+// CRUD 骨架由 composable 提供，本页只声明差异点：
+// 后端专用接口（字段驼峰）、本地过滤规则、只提交表单字段的 payload。
+const {
+  list, loading, total, selection, showSearch, queryParams,
+  dialogVisible, dialogTitle, saving, formRef, form,
+  getList, handleQuery, resetQuery, handleSelectionChange,
+  handleAdd, handleUpdate, cancel, submitForm, handleDelete
+} = useAdminCrud<AdminProjectCategoryVo, CategoryForm, CategoryQuery>({
+  idField: 'id',
+  // 后端专用接口仅支持 status 筛选，其余两个条件由本地过滤
+  fetchList: async (params): Promise<AdminProjectCategoryVo[]> => {
+    const data = await adminResourceList('project_category', params)
+    const rows: AdminProjectCategoryVo[] = Array.isArray(data) ? data : []
+    return rows.filter((row) => matchLocalFilter(row, queryParams))
+  },
+  fetchDetail: (id) => adminResourceGet('project_category', id),
+  createFn: (payload) => adminResourceCreate('project_category', payload),
+  updateFn: (id, payload) => adminResourceUpdate('project_category', id, payload),
+  deleteFn: (id) => adminResourceDelete('project_category', id),
+  defaultQuery: { categoryValue: '', labelZh: '', status: '' },
+  createForm: createDefaultForm,
+  // 行数据回填：只取表单字段，避免把 id 之类写进表单
+  fillForm: (form, row) => fillFormWith(form, row),
+  // 详情覆盖：字段缺失时回落默认值
+  applyDetail: (form, detail) => fillFormWith(form, detail),
+  // 只下发后端支持的 status 条件
+  buildParams: (query) => (query.status !== '' ? { status: query.status } : {}),
+  titles: { add: '添加作品分类', edit: '修改作品分类' },
+  logLabel: '作品分类'
+})
 
-// ---------------- 删除 ----------------
-/**
- * 删除：传入行时删该行，否则批量删除选中行；
- * 先弹二次确认（用户取消则直接返回），再用 Promise.allSettled 并发删除并统计成功 / 失败条数。
- */
-async function handleDelete(row?: AdminProjectCategoryVo) {
-  const rows = row ? [row] : selection.value
-  if (!rows.length) return
-  const ok = await ElMessageBox.confirm(
-    row ? '确认删除该条数据？' : `确认删除选中的 ${rows.length} 条数据？`,
-    '提示',
-    { type: 'warning' }
-  )
-    .then(() => true)
-    .catch(() => false)
-  if (!ok) return
-
-  const results = await Promise.allSettled(
-    rows.map((r) => adminResourceDelete('project_category', r.id))
-  )
-  const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-  failed.forEach((r) => console.error('[admin] 作品分类删除失败', r.reason))
-  if (failed.length) {
-    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
-  } else {
-    ElMessage.success(`已删除 ${results.length} 条`)
-  }
-  getList()
+const rules = {
+  categoryValue: [{ required: true, message: '分类值不能为空', trigger: 'blur' }]
 }
 
 onMounted(getList)
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .app-container  页面容器，纵向排列各区块
+   2) .search-card    搜索卡片
+   3) .table-card     表格卡片
+   4) .toolbar       工具栏（左侧操作区 / 右侧统计与刷新）
+   5) .icon-btn      圆形图标按钮
+   6) .w-full        表单控件占满宽度 */
 .app-container {
   display: flex;
   flex-direction: column;

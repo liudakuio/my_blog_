@@ -1,8 +1,11 @@
 <!--
-  通用 CRUD 兜底页的图片上传控件：调用后端 POST /api/admin/upload/image。
+  通用图片上传控件：调用后端 POST /api/admin/upload/image。
   字段值统一为后端返回的相对 URL（如 /uploads/2026/09/26/uuid.jpg），不再手填。
-  限制：仅 jpg/jpeg/png/gif/webp，单文件不超过 5MB；需 blog:upload:edit 权限
-  （该权限不在后端种子数据内，需在 sys_permission 手工插入，否则请求必然 403）。
+  限制：允许的图片类型与体积上限见 @/utils/image.ts（需与后端 file.upload 配置保持一致）。
+  权限：需 blog:upload:edit（该权限不在后端种子数据内，需在 sys_permission 手工插入，否则请求必然 403）。
+  结构说明：上传的权限判断 / 类型与体积校验 / 请求与错误处理由 @/composables/useImageUpload
+    统一提供，本组件只负责展示与事件派发。
+  被谁引用：src/views/admin/crud/index.vue（通用 CRUD 兜底页的 image 字段）。
 -->
 <template>
   <div class="image-upload">
@@ -49,64 +52,32 @@
       </el-button>
     </div>
 
-    <p v-if="!canUpload" class="iu-tip">无上传权限（缺少 blog:upload:edit）</p>
+    <p v-if="!canUpload" class="iu-tip">无上传权限（缺少 {{ PERM_UPLOAD }}）</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
-import type { UploadRequestOptions } from 'element-plus'
-import { useUserStore } from '@/store/user'
-import { adminUploadImage } from '@/api/admin'
+import { useImageUpload } from '@/composables/useImageUpload'
+import { PERM_UPLOAD } from '@/config/permissions'
 
 defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [url: string] }>()
 
-const userStore = useUserStore()
+// 上传逻辑（权限判断 / 类型与体积校验 / 请求与错误处理）由 composable 统一提供
+const {
+  canUpload,
+  uploading,
+  errorMsg,
+  ACCEPT,
+  beforeUpload,
+  handleUpload
+} = useImageUpload({
+  // 上传成功后回写为后端返回的相对 URL
+  onUploaded: (url) => emit('update:modelValue', url)
+})
 
-// 与后端 application.yml 的 file.upload 保持一致
-const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-const MAX_SIZE = 5 * 1024 * 1024
-const ACCEPT = ALLOWED_EXT.map((e) => '.' + e).join(',')
-
-const uploading = ref(false)
-const errorMsg = ref('')
-
-const canUpload = computed(() => userStore.hasPerm('blog:upload:edit'))
-
-/** 前置校验：类型白名单 + 大小上限，不合规直接拦截不发请求 */
-function beforeUpload(file: File) {
-  errorMsg.value = ''
-  const ext = (file.name.split('.').pop() || '').toLowerCase()
-  if (!ALLOWED_EXT.includes(ext)) {
-    errorMsg.value = `不支持的图片类型：${ext || '未知'}（仅支持 ${ALLOWED_EXT.join('/')}）`
-    return false
-  }
-  if (file.size > MAX_SIZE) {
-    errorMsg.value = `图片超过 5MB（当前 ${(file.size / 1024 / 1024).toFixed(2)}MB）`
-    return false
-  }
-  return true
-}
-
-/** 自定义上传：复用 service，自动带 JWT、统一错误提示与 401 处理 */
-async function handleUpload(options: UploadRequestOptions) {
-  uploading.value = true
-  try {
-    const res = await adminUploadImage(options.file)
-    emit('update:modelValue', res.url)
-    ElMessage.success('上传成功')
-    options.onSuccess(res as any)
-  } catch (e: any) {
-    errorMsg.value = e?.message || '上传失败'
-    options.onError(e)
-  } finally {
-    uploading.value = false
-  }
-}
-
+/** 移除已上传的图片 */
 function handleRemove() {
   errorMsg.value = ''
   emit('update:modelValue', '')

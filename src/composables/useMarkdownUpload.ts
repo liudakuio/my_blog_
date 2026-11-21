@@ -13,21 +13,13 @@ import { ElMessage } from 'element-plus'
 import type { UploadImgEvent } from 'md-editor-v3'
 import { adminUploadImage } from '@/api/admin'
 import { useUserStore } from '@/store/user'
-
-/** 相对地址 -> 绝对地址；已是绝对地址或格式异常时原样返回 */
-function toAbsoluteUrl(url: string): string {
-  if (!url) return ''
-  try {
-    return new URL(url, window.location.origin).href
-  } catch {
-    return url
-  }
-}
+import { toAbsoluteUrl } from '@/utils/image'
+import { PERM_UPLOAD } from '@/config/permissions'
 
 export function useMarkdownUpload() {
   const userStore = useUserStore()
   // 是否具备图片上传权限
-  const canUpload = computed(() => userStore.hasPerm('blog:upload:edit'))
+  const canUpload = computed(() => userStore.hasPerm(PERM_UPLOAD))
 
   // 逐个上传后把 URL 列表回传给编辑器
   const onUploadImg: UploadImgEvent = async (files, callBack) => {
@@ -44,8 +36,8 @@ export function useMarkdownUpload() {
       }
       // 必须调用回调，编辑器才会把 ![](url) 插入正文
       callBack(urls)
-    } catch (e: any) {
-      ElMessage.error(e?.message || '图片上传失败')
+    } catch (e) {
+      ElMessage.error((e as { message?: string })?.message || '图片上传失败')
     }
   }
 

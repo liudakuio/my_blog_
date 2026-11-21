@@ -1,6 +1,7 @@
-// 每日一句：英文名句池 + 按「一年中的第几天」取句。
-// 取句规则：dayOfYear % 长度，保证同一天刷新页面拿到的是同一句；
-// 用户点「换一句」时在当日基准上做偏移，刷新后回到当日句子。
+// 每日一句：英文名句池（第三方接口不可用时的本地兜底）。
+// 取句来源：主路径为第三方 API（src/api/dailyEnglish.ts），请求失败时由其回退到本文件的句池。
+// 维护注意：句池按需增补即可；原先的「按一年中的第几天取模」与「星期缩写」逻辑
+//   已迁至 src/utils/date.ts，本文件只保留静态数据。
 
 export interface DailySentence {
   en: string
@@ -46,20 +47,3 @@ export const SENTENCES: DailySentence[] = [
   { en: 'Knowledge shared is knowledge squared.', zh: '分享出去的知识，会变成知识的平方。' },
   { en: 'Build things. Break things. Learn. Repeat.', zh: '造点东西，弄坏它，学到东西，然后重来。' }
 ]
-
-/** 一年中的第几天（1 起算） */
-function dayOfYear(date: Date): number {
-  const start = new Date(date.getFullYear(), 0, 0)
-  return Math.floor((date.getTime() - start.getTime()) / 86400000)
-}
-
-/** 取指定日期的句子：同一天始终返回同一句 */
-export function getDailySentence(date: Date = new Date(), offset = 0): DailySentence {
-  const index = (dayOfYear(date) - 1 + offset) % SENTENCES.length
-  return SENTENCES[(index + SENTENCES.length) % SENTENCES.length]
-}
-
-/** 星期缩写，用于日期戳 */
-export function weekdayShort(date: Date): string {
-  return ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][date.getDay()]
-}

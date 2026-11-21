@@ -1,6 +1,7 @@
 <!--
   菜单管理（/api/system/menu，主键 menuId；支持平铺 / 树形切换）
-  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  结构说明：列表 / 查询 / 多选 / 弹窗 / 提交 / 删除的通用骨架由 @/composables/useAdminCrud
+    提供，本页只保留模板、表格列、搜索项、校验规则与差异配置（主键、回填、提交字段）。
   数据来源：@/api/system 的 systemMenuList / Get / Create / Update / Delete。
   引用关系：由 router/index.ts 的 SYSTEM_PAGES 注册（权限前缀 system: 的菜单）。
   注意：主键为 menuId；菜单改动影响后台动态路由与侧边栏，需重新登录生效。
@@ -175,10 +176,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
 import { ArrowDown, ArrowUp, Delete, Edit, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useAdminCrud } from '@/composables/useAdminCrud'
+import { systemEditPerm } from '@/config/permissions'
 import {
   systemMenuList,
   systemMenuGet,
@@ -186,9 +188,10 @@ import {
   systemMenuUpdate,
   systemMenuDelete
 } from '@/api/system'
+import type { SysMenuSaveVo, SysMenuVo } from '@/api/system'
 
 const userStore = useUserStore()
-const editable = computed(() => userStore.hasPerm('system:menu:edit'))
+const editable = computed(() => userStore.hasPerm(systemEditPerm('menu')))
 
 const STATUS_OPTIONS = [
   { label: '正常', value: '0' },
@@ -200,57 +203,44 @@ const MENU_TYPES = [
   { label: '按钮', value: 'F' }
 ]
 
+/** 菜单类型的中文名 */
 function menuTypeLabel(t?: string) {
   return MENU_TYPES.find((o) => o.value === t)?.label ?? t ?? ''
 }
 
-// ---------------- 列表 ----------------
-const list = ref<any[]>([])
-const loading = ref(false)
-const total = ref(0)
-const selection = ref<any[]>([])
-const showSearch = ref(true)
+/** 菜单表单字段 */
+type MenuForm = {
+  parentId: number
+  menuName: string
+  menuType: string
+  orderNum: number
+  path: string
+  component: string
+  icon: string
+  perms: string
+  status: string
+}
+
+/** 菜单页查询条件；字段为必填字符串，便于搜索表单直接绑定 */
+type MenuQuery = {
+  menuName: string
+  menuType: string
+  status: string
+}
+
+/** 表单字段名列表：提交时只提交这些字段，避免把行数据里的额外列一起带上 */
+const FORM_KEYS = [
+  'parentId', 'menuName', 'menuType', 'orderNum',
+  'path', 'component', 'icon', 'perms', 'status'
+] as const
+
+// ---------------- 列表 / 树形切换 ----------------
+/** 树形 / 平铺切换；切换后重新拉取列表 */
 const treeMode = ref(false)
 
-const queryParams = reactive<Record<string, any>>({ menuName: '', menuType: '', status: '' })
-
-async function getList() {
-  loading.value = true
-  try {
-    const params: Record<string, any> = { tree: treeMode.value }
-    Object.keys(queryParams).forEach((k) => {
-      const v = queryParams[k]
-      if (v !== '' && v !== undefined && v !== null) params[k] = v
-    })
-    const data = await systemMenuList(params)
-    list.value = Array.isArray(data) ? data : []
-    total.value = list.value.length
-  } catch (e) {
-    console.error('[admin] 菜单列表加载失败', e)
-    list.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function handleQuery() {
-  getList()
-}
-
-function resetQuery() {
-  Object.keys(queryParams).forEach((k) => {
-    queryParams[k] = ''
-  })
-  getList()
-}
-
-function handleSelectionChange(rows: any[]) {
-  selection.value = rows
-}
-
-// 上级菜单下拉：始终拉全量树形
-const menuTree = ref<any[]>([])
+// ---------------- 上级菜单下拉（页面特有：始终拉全量树形） ----------------
+const menuTree = ref<SysMenuVo[]>([])
+/** 拉取菜单树（供「上级菜单」下拉使用） */
 async function loadMenuTree() {
   try {
     const data = await systemMenuList({ tree: true })
@@ -261,9 +251,10 @@ async function loadMenuTree() {
   }
 }
 
+/** 上级菜单下拉项：按层级加缩进前缀 */
 const parentOptions = computed(() => {
   const out: { value: number; label: string }[] = [{ value: 0, label: '顶级菜单' }]
-  const walk = (nodes: any[], depth: number) => {
+  const walk = (nodes: SysMenuVo[], depth: number) => {
     for (const n of nodes) {
       const prefix = depth ? '　'.repeat(depth) + '└ ' : ''
       out.push({ value: n.menuId, label: prefix + n.menuName })
@@ -274,105 +265,57 @@ const parentOptions = computed(() => {
   return out
 })
 
-// ---------------- 弹窗表单 ----------------
-const dialogVisible = ref(false)
-const dialogTitle = ref('')
-const saving = ref(false)
-const formRef = ref<any>(null)
-const editingId = ref<string | number | null>(null)
-
-const defaultForm = () => ({
-  parentId: 0,
-  menuName: '',
-  menuType: 'C',
-  orderNum: 0,
-  path: '',
-  component: '',
-  icon: '',
-  perms: '',
-  status: '0'
+// CRUD 骨架由 composable 提供，本页只声明差异点：
+// 主键 menuId、查询条件、默认表单、详情覆盖、提交字段与删除文案。
+const {
+  list, loading, total, selection, showSearch, queryParams,
+  dialogVisible, dialogTitle, saving, formRef, form,
+  getList, handleQuery, resetQuery, handleSelectionChange,
+  handleAdd, handleUpdate, cancel, submitForm, handleDelete
+} = useAdminCrud<SysMenuVo, MenuForm, MenuQuery>({
+  idField: 'menuId',
+  // 树形开关不属于搜索表单，单独作为参数带上
+  fetchList: (params) => systemMenuList({ ...params, tree: treeMode.value }),
+  fetchDetail: systemMenuGet,
+  createFn: (payload) => systemMenuCreate(payload as SysMenuSaveVo),
+  updateFn: (id, payload) => systemMenuUpdate(id, payload as SysMenuSaveVo),
+  deleteFn: systemMenuDelete,
+  defaultQuery: { menuName: '', menuType: '', status: '' },
+  createForm: () => ({
+    parentId: 0,
+    menuName: '',
+    menuType: 'C',
+    orderNum: 0,
+    path: '',
+    component: '',
+    icon: '',
+    perms: '',
+    status: '0'
+  }),
+  // 详情覆盖：菜单字段较多，整份详情合并进表单
+  applyDetail: (form, detail) => {
+    Object.assign(form, detail)
+  },
+  // 提交字段：只提交表单定义的字段
+  buildPayload: (form) => {
+    const payload: Record<string, unknown> = {}
+    FORM_KEYS.forEach((k) => {
+      payload[k] = (form as Record<string, unknown>)[k]
+    })
+    return payload
+  },
+  // 保存 / 删除后刷新「上级菜单」下拉
+  afterSave: () => loadMenuTree(),
+  afterDelete: () => loadMenuTree(),
+  titles: { add: '添加菜单', edit: '修改菜单' },
+  deleteConfirmText: (rows, isBatch) => isBatch
+    ? `确认删除选中的 ${rows.length} 条数据？`
+    : `确认删除菜单「${rows[0].menuName}」？`,
+  logLabel: '菜单'
 })
-const form = reactive(defaultForm())
 
 const rules = {
   menuName: [{ required: true, message: '请输入菜单名称', trigger: 'blur' }]
-}
-
-function handleAdd() {
-  editingId.value = null
-  dialogTitle.value = '添加菜单'
-  Object.assign(form, defaultForm())
-  dialogVisible.value = true
-}
-
-async function handleUpdate(row?: any) {
-  const target = row ?? selection.value[0]
-  if (!target) return
-  editingId.value = target.menuId
-  dialogTitle.value = '修改菜单'
-  Object.assign(form, defaultForm(), target)
-  try {
-    const detail: any = await systemMenuGet(target.menuId)
-    if (detail) Object.assign(form, detail)
-  } catch (e) {
-    console.error('[admin] 菜单详情加载失败，使用行数据兜底', e)
-  }
-  dialogVisible.value = true
-}
-
-function cancel() {
-  dialogVisible.value = false
-}
-
-async function submitForm() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  saving.value = true
-  try {
-    const payload: Record<string, any> = {}
-    Object.keys(defaultForm()).forEach((k) => {
-      payload[k] = (form as any)[k]
-    })
-    if (editingId.value !== null) {
-      await systemMenuUpdate(editingId.value, payload)
-      ElMessage.success('修改成功')
-    } else {
-      await systemMenuCreate(payload)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    getList()
-    loadMenuTree()
-  } catch (e) {
-    console.error('[admin] 菜单保存失败', e)
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 删除 ----------------
-async function handleDelete(row?: any) {
-  const rows = row ? [row] : selection.value
-  if (!rows.length) return
-  const ok = await ElMessageBox.confirm(
-    row ? `确认删除菜单「${row.menuName}」？` : `确认删除选中的 ${rows.length} 条数据？`,
-    '提示',
-    { type: 'warning' }
-  )
-    .then(() => true)
-    .catch(() => false)
-  if (!ok) return
-
-  const results = await Promise.allSettled(rows.map((r: any) => systemMenuDelete(r.menuId)))
-  const failed = results.filter((r) => r.status === 'rejected')
-  failed.forEach((r: any) => console.error('[admin] 菜单删除失败', r.reason))
-  if (failed.length) {
-    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
-  } else {
-    ElMessage.success(`已删除 ${results.length} 条`)
-  }
-  getList()
-  loadMenuTree()
 }
 
 onMounted(() => {
@@ -382,6 +325,13 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .app-container  页面容器，纵向排列各区块
+   2) .search-card    搜索卡片
+   3) .table-card     表格卡片
+   4) .toolbar       工具栏（左侧操作区 / 右侧统计与刷新）
+   5) .icon-btn      圆形图标按钮
+   6) .w-full        表单控件占满宽度 */
 .app-container {
   display: flex;
   flex-direction: column;

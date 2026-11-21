@@ -2,22 +2,14 @@
 // 被 store/user.ts 调用（登录、拉取信息与菜单、登出），后台路由注入依赖这里返回的菜单树
 // 登录用 requestRaw（拿未拆包的原始响应），其余走 service（自动取 data 并按业务码校验）
 import service, { requestRaw } from '@/utils/request'
+import type { MenuVo } from './types'
 
-/** 后端 SysMenu（菜单树节点，含 children） */
-export interface MenuItem {
-  menuId: number
-  parentId: number
-  menuName: string
-  menuType: 'M' | 'C' | 'F'
-  orderNum: number
-  path: string
-  component: string
-  icon: string
-  perms: string
-  status: string
-  createTime?: string
-  children?: MenuItem[]
-}
+/**
+ * 后端菜单树节点（sys_menu 表，含 children）。
+ * 该结构与 system.ts 的菜单管理接口返回的是同一张表，已统一到 api/types.ts 的 MenuVo；
+ * 此处保留 MenuItem 别名，避免既有引用（store/user.ts、config/menu.ts）失效。
+ */
+export type MenuItem = MenuVo
 
 /** 后端 UserInfo（登录用户信息） */
 export interface UserInfo {
@@ -32,13 +24,22 @@ export interface LoginBody {
   password: string
 }
 
+/** 登录接口的原始响应体（requestRaw 不剥外壳，直接拿到后端统一响应体） */
+interface LoginRawResponse {
+  /** 规范位置：令牌在 data 字段 */
+  data?: string
+  /** 兼容位置：后端重载 bug 时令牌在 msg 字段 */
+  msg?: string
+}
+
 /** POST /api/auth/login —— 返回 JWT 字符串。
  *  兼容后端差异：令牌可能在 data（规范）或 msg（后端重载 bug 时）字段，优先取 data。 */
 export function login(body: LoginBody) {
-  return requestRaw.post('/api/auth/login', body).then((res: any) => {
-    const token = res?.data ?? res?.msg
+  return requestRaw.post('/api/auth/login', body).then((res) => {
+    const payload = res as unknown as LoginRawResponse
+    const token = payload?.data ?? payload?.msg
     if (!token) throw new Error('登录失败：未获取到令牌')
-    return token as string
+    return token
   })
 }
 
@@ -49,7 +50,7 @@ export function getInfo() {
 
 /** GET /api/auth/menus —— 当前用户角色对应的菜单树 */
 export function getMenus() {
-  return service.get<MenuItem[], MenuItem[]>('/api/auth/menus')
+  return service.get<MenuVo[], MenuVo[]>('/api/auth/menus')
 }
 
 /** POST /api/auth/logout —— 无状态登出（前端丢弃令牌） */

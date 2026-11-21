@@ -25,11 +25,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/store/app'
 import type { Language } from '@/types'
-
-interface PortfolioPageContent {
-  title: string
-  description: string
-}
+import type { PortfolioPageContent } from '@/data/site'
 
 const PORTFOLIO_PAGE_DATA: Record<Language, PortfolioPageContent> = {
   zh: { title: '作品', description: '路上拍的照片、应用开发作品和美食。' },
@@ -47,6 +43,7 @@ const routeFilter = computed(() => (route.query.filter as string) || 'All')
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：页头（标题与描述） / 作品网格容器 */
 .portfolio-page {
   width: 100%;
   padding-bottom: 4rem;

@@ -16,6 +16,7 @@
 // 变更记录：site_text 已随后端下线移除（原被误列为专用资源，调用只会返回 400「未知资源」）；
 //   music / social 后端从未提供任何接口，不要再按「走通用 CRUD」理解。
 import service from '@/utils/request'
+import { adminPath } from './paths'
 import type { AdminVoMap } from './adminTypes'
 
 /** 走专用接口的资源（与后端 4 个专用 Controller 一一对应；顺序按资源分组排列） */
@@ -44,47 +45,40 @@ export function isDedicatedResource(resource: string): resource is DedicatedReso
   return (DEDICATED_RESOURCES as readonly string[]).includes(resource)
 }
 
-function path(resource: string, id?: string | number) {
-  const base = '/api/admin/' + resource
-  return id === undefined || id === null || id === ''
-    ? base
-    : base + '/' + encodeURIComponent(String(id))
-}
-
 /**
  * GET /api/admin/{resource} —— 列表（全量返回，无分页）
  * params 为该资源自己的查询对象，可选字段见本文件头注释；超出范围的后端会静默忽略。
  */
 export function adminResourceList<R extends DedicatedResource>(
   resource: R,
-  params?: Record<string, any>
+  params?: Record<string, unknown>
 ) {
-  return service.get<AdminVoMap[R][], AdminVoMap[R][]>(path(resource), { params })
+  return service.get<AdminVoMap[R][], AdminVoMap[R][]>(adminPath(resource), { params })
 }
 
 /** GET /api/admin/{resource}/{id} —— 详情 */
 export function adminResourceGet<R extends DedicatedResource>(resource: R, id: string | number) {
-  return service.get<AdminVoMap[R], AdminVoMap[R]>(path(resource, id))
+  return service.get<AdminVoMap[R], AdminVoMap[R]>(adminPath(resource, id))
 }
 
 /** POST /api/admin/{resource} —— 新增，返回完整对象 */
 export function adminResourceCreate<R extends DedicatedResource>(
   resource: R,
-  body: Record<string, any>
+  body: Record<string, unknown>
 ) {
-  return service.post<AdminVoMap[R], AdminVoMap[R]>(path(resource), body)
+  return service.post<AdminVoMap[R], AdminVoMap[R]>(adminPath(resource), body)
 }
 
 /** PUT /api/admin/{resource}/{id} —— 修改；未提交（null）的字段保持原值 */
 export function adminResourceUpdate<R extends DedicatedResource>(
   resource: R,
   id: string | number,
-  body: Record<string, any>
+  body: Record<string, unknown>
 ) {
-  return service.put<AdminVoMap[R], AdminVoMap[R]>(path(resource, id), body)
+  return service.put<AdminVoMap[R], AdminVoMap[R]>(adminPath(resource, id), body)
 }
 
 /** DELETE /api/admin/{resource}/{id} —— 删除指定记录 */
 export function adminResourceDelete(resource: DedicatedResource, id: string | number) {
-  return service.delete(path(resource, id))
+  return service.delete(adminPath(resource, id))
 }

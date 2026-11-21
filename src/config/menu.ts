@@ -35,6 +35,7 @@ export function resolveIcon(name?: string): string {
 }
 
 // 由菜单 component 推导前端路由路径：blog/project -> /admin/project
+// 兜底：component 与 path 都缺失时按空串处理，避免菜单数据不完整时抛错
 export function menuRoutePath(menu: MenuItem): string {
-  return '/admin/' + (menu.component || menu.path).replace(/^blog\//, '')
+  return '/admin/' + (menu.component || menu.path || '').replace(/^blog\//, '')
 }

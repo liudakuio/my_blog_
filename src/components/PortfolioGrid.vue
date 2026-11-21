@@ -32,12 +32,12 @@
         v-for="(project, pIndex) in filteredProjects"
         :key="project.id"
         class="project-card"
-        :class="{ 'project-card--dev': project.common.category === 'Development' }"
+        :class="{ 'project-card--dev': project.common.category === Category.DEV }"
         :style="{ animationDelay: `${Math.min(pIndex, 11) * 0.05}s` }"
         @click="openProjectDetail(project)"
       >
         <!-- 开发类项目卡片：图标 + 标题 + 描述 + 技术栈 -->
-        <template v-if="project.common.category === 'Development'">
+        <template v-if="project.common.category === Category.DEV">
           <div class="dev-inner">
             <div class="dev-head">
               <div class="dev-icon">
@@ -104,7 +104,7 @@
           </div>
 
           <!-- 标签列表（摄影类不显示标签） -->
-          <div v-if="project.common.category !== 'Photography'" class="tag-row">
+          <div v-if="project.common.category !== Category.PHOTO" class="tag-row">
             <span v-for="tag in projectContent(project).tags" :key="tag" class="card-tag">#{{ tag }}</span>
           </div>
         </template>
@@ -123,7 +123,7 @@
     <ProjectDetailModal
       v-if="isModalRendered"
       :visible="!!selectedProject"
-      :project="displayProject as any"
+      :project="displayProject"
       @close="closeProjectDetail"
       @lightbox="openLightbox"
     />
@@ -174,6 +174,7 @@ import { useAppStore } from '@/store/app'
 import { usePortfolioStore } from '@/store/portfolio'
 import { pickText } from '@/utils/i18n'
 import type { Project } from '@/types'
+import { Category } from '@/types'
 import ProjectDetailModal from '@/views/portfolio/components/ProjectDetailModal.vue'
 
 const props = defineProps<{

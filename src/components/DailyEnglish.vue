@@ -1,7 +1,8 @@
 <!--
   每日一句：全站顶部通栏，紧贴导航栏下方，首页 / 作品 / 文章 / 联系每个页面都可见。
-  取句逻辑在 src/data/dailyEnglish.ts：按「一年中的第几天」取模，同一天刷新结果不变。
-  交互：朗读（Web Speech API）、复制、换一句（在当日基准上偏移，刷新后回到当日句子）。
+  取句逻辑：调用第三方 API（src/api/dailyEnglish.ts），失败时回退本地句池；
+    第三方接口不支持指定句子，故「换一句」按钮即重新请求一次。
+  交互：朗读（Web Speech API）、复制、换一句。
   布局：桌面端横向三段（标签日期 / 句子 / 操作），移动端纵向堆叠。
 -->
 <template>
@@ -60,10 +61,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed,onMounted ,ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAppStore } from '@/store/app'
-import { fetchDailySentence } from '@/api/DailyEnglish'
-import { weekdayShort, type DailySentence } from '@/data/dailyEnglish'
+import { fetchDailySentence } from '@/api/dailyEnglish'
+import type { DailySentence } from '@/data/dailyEnglish'
+import { todayStamp } from '@/utils/date'
+import { writeClipboard } from '@/utils/clipboard'
 
 
 const appStore = useAppStore()
@@ -73,9 +76,6 @@ const sentence = ref<DailySentence | null>(null)
 // 复制成功的短暂反馈
 const copied = ref(false)
 
-// 换一句的偏移量；刷新后归零，回到当日句子
-const offset = ref(0)
-
 const LABELS = {
   zh: { tag: '每日一句', speak: '朗读', copy: '复制', copied: '已复制', next: '换一句' },
   en: { tag: 'Daily English', speak: 'Speak', copy: 'Copy', copied: 'Copied', next: 'Next' }
@@ -84,15 +84,11 @@ const labels = computed(() => LABELS[appStore.language])
 
 // 首屏拉取 API 句子（异步，不阻塞渲染）
 onMounted(async () => {
-  getFetchDailySentence()
+  loadSentence()
 })
 
 // 日期戳：本地日期，格式 2026.10.10 · SAT
-const dateStamp = computed(() => {
-  const d = new Date()
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} · ${weekdayShort(d)}`
-})
+const dateStamp = computed(() => todayStamp())
 
 // 朗读：不变，朗读英文
 function speak() {
@@ -105,34 +101,24 @@ function speak() {
   window.speechSynthesis.speak(utter)
 }
 
-async function getFetchDailySentence(){
+/** 拉取一句话并更新展示（第三方接口失败时内部已回退本地句池） */
+async function loadSentence(){
   const api = await fetchDailySentence()
   if (api) sentence.value = api
 }
 
-// 复制：clipboard 不可用时回退到 textarea + execCommand
+// 复制英文 + 中文释义（实现见 utils/clipboard.ts，内部含 execCommand 回退）
 async function copy() {
   if (!sentence.value) return
   const text = `${sentence.value.en}\n${sentence.value.zh}`
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    const area = document.createElement('textarea')
-    area.value = text
-    area.style.position = 'fixed'
-    area.style.opacity = '0'
-    document.body.appendChild(area)
-    area.select()
-    document.execCommand('copy')
-    document.body.removeChild(area)
-  }
+  await writeClipboard(text)
   copied.value = true
   setTimeout(() => { copied.value = false }, 1600)
 }
 
-// 换一句：API 不支持随机，改为本地池随机
+// 换一句：第三方接口每次返回不同句子，重新请求一次即可
 function next() {
-  getFetchDailySentence()
+  loadSentence()
 }
 </script>
 

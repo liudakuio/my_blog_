@@ -7,24 +7,45 @@ import { ref } from 'vue'
 import { getArticlePage, getArticleCategories } from '@/api'
 import type { ArticleVo, CategoryVo } from '@/api/types'
 import type { Article } from '@/types'
+import { ArticleCategory } from '@/types'
+import { pickField } from '@/utils/i18n'
 
-/** 将后端 ArticleVo 归一化为前端使用的 Article 结构 */
+/** 文章列表排序方式：按发布时间倒序 / 正序 */
+export type ArticleSort = 'date_desc' | 'date_asc'
+
+/**
+ * 将后端分类值转为前端的 ArticleCategory。
+ * 后端分类值与枚举一一对应；命中枚举时返回枚举常量，
+ * 未命中时原样保留字符串（不抛错），以兼容后端新增分类而前端尚未跟进的情况。
+ */
+function toArticleCategory(value: string | undefined): Article['common']['category'] {
+  const raw = value ?? ''
+  return (Object.values(ArticleCategory) as string[]).includes(raw)
+    ? (raw as ArticleCategory)
+    : (raw as Article['common']['category'])
+}
+
+/**
+ * 将后端 ArticleVo 归一化为前端使用的 Article 结构。
+ * 多语取值：lang=all 时标题收在 vo.zh / vo.en 内，lang=zh|en 时直接平铺在 vo.title 上，
+ *   两套字段都需兼容，故统一经 utils/i18n.ts 的 pickField 取值。
+ */
 function normalize(vo: ArticleVo): Article {
   return {
     id: vo.id,
     common: {
-      category: (vo.category ?? '') as Article['common']['category'],
+      category: toArticleCategory(vo.category),
       link: vo.link ?? '',
       coverImage: vo.coverImage || undefined,
       date: vo.date || undefined
     },
     zh: {
-      title: vo.zh ? (vo.zh.title ?? '') : (vo.title ?? ''),
-      content: vo.content ?? vo.zh?.content ?? ''
+      title: vo.zh ? pickField(vo.zh, 'title') : (vo.title ?? ''),
+      content: vo.content ?? pickField(vo.zh, 'content')
     },
     en: {
-      title: vo.en ? (vo.en.title ?? '') : (vo.title ?? ''),
-      content: vo.content ?? vo.en?.content ?? ''
+      title: vo.en ? pickField(vo.en, 'title') : (vo.title ?? ''),
+      content: vo.content ?? pickField(vo.en, 'content')
     }
   }
 }
@@ -37,7 +58,7 @@ export const useArticleStore = defineStore('articles', () => {
   const categoriesLoaded = ref(false)
 
   /** 当前查询条件，翻页/筛选/排序时复用 */
-  const query = ref({ category: '', sort: 'date_desc' as 'date_desc' | 'date_asc', page: 1, pageSize: 20 })
+  const query = ref({ category: '', sort: 'date_desc' as ArticleSort, page: 1, pageSize: 20 })
 
   async function loadArticles(options?: { append?: boolean }) {
     const append = options?.append ?? false
@@ -77,7 +98,7 @@ export const useArticleStore = defineStore('articles', () => {
   }
 
   /** 切换排序方向 */
-  function setSort(sort: 'date_desc' | 'date_asc') {
+  function setSort(sort: ArticleSort) {
     query.value.sort = sort
     query.value.page = 1
     return loadArticles()

@@ -49,6 +49,7 @@ function handleLogout() {
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：个人信息卡片 / 字段分组 / 表单控件 */
 .profile {
   display: flex;
   flex-direction: column;

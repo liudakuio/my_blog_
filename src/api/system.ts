@@ -2,9 +2,9 @@
 // 路径约定：/api/system/{resource}；写操作需 system:{resource}:edit 权限。
 // 注意三者主键名不同：userId / roleId / menuId。
 // 被谁引用：views/admin/system/ 下的 user / role / menu 三个页面。
-// 类型保留说明：页面侧目前统一用 any，未 import 这些 VO；
-// 保留它们是未来做类型收窄的锚点，且函数签名已用其约束出入参。
+// 类型说明：本文件的 VO 已用于约束函数签名，页面侧通过 useAdminCrud 的泛型参数引用它们。
 import service from '@/utils/request'
+import type { MenuVo } from './types'
 
 // ---------------- 用户 ----------------
 export interface SysUserVo {
@@ -19,12 +19,15 @@ export interface SysUserVo {
 /** password：新增必填（后端 BCrypt 加密）；修改时留空表示不修改 */
 export type SysUserSaveVo = Partial<Omit<SysUserVo, 'userId'>> & { password?: string }
 
-export interface SysUserQuery {
+/**
+ * 用户列表查询条件；用 type 而非 interface，便于作为泛型参数传入 useAdminCrud。
+ * 字段为必填字符串：查询条件由页面的搜索表单直接绑定，空值在请求前会被剔除。
+ */
+export type SysUserQuery = {
   /** 模糊匹配 */
-  username?: string
-  status?: string
+  username: string
+  status: string
 }
-
 /** GET /api/system/user —— 用户列表 */
 export function systemUserList(params?: SysUserQuery) {
   return service.get<SysUserVo[], SysUserVo[]>('/api/system/user', { params })
@@ -60,9 +63,10 @@ export interface SysRoleVo {
 /** menuIds 为空表示不调整菜单绑定 */
 export type SysRoleSaveVo = Partial<Omit<SysRoleVo, 'roleId'>>
 
-export interface SysRoleQuery {
-  roleKey?: string
-  status?: string
+/** 角色列表查询条件；字段为必填字符串，便于搜索表单直接绑定 */
+export type SysRoleQuery = {
+  roleKey: string
+  status: string
 }
 
 /** GET /api/system/role —— 角色列表 */
@@ -87,27 +91,22 @@ export function systemRoleDelete(roleId: number | string) {
 }
 
 // ---------------- 菜单 ----------------
-export interface SysMenuVo {
-  menuId: number
-  parentId?: number
-  menuName: string
-  /** M 目录 C 菜单 F 按钮 */
-  menuType?: 'M' | 'C' | 'F'
-  orderNum?: number
-  path?: string
-  component?: string
-  icon?: string
-  perms?: string
-  status?: string
-  createTime?: string
-  /** tree=true 时的子节点 */
-  children?: SysMenuVo[]
-}
+/**
+ * 系统管理接口的菜单 VO。
+ * 与认证接口 /api/auth/menus 返回的是同一张 sys_menu 表，已统一复用 api/types.ts 的 MenuVo；
+ * 此处保留 SysMenuVo 别名，避免既有引用失效。
+ */
+export type SysMenuVo = MenuVo
 
 /** 新增：menuName 必填，menuType 缺省 C，parentId 缺省 0 */
 export type SysMenuSaveVo = Partial<Omit<SysMenuVo, 'menuId' | 'children'>>
 
-export interface SysMenuQuery {
+/**
+ * 菜单列表查询条件；字段可选。
+ * 说明：菜单页的搜索表单只绑定 menuName / menuType / status，
+ * 而「上级菜单下拉」只需 tree=true，因此这里的字段必须保持可选。
+ */
+export type SysMenuQuery = {
   /** 模糊匹配 */
   menuName?: string
   menuType?: string

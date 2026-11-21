@@ -43,12 +43,13 @@
 
 <script setup lang="ts">
 import { useAppStore } from '@/store/app'
+import { currentYear } from '@/utils/date'
 import SidebarNav from './components/SidebarNav.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import DailyEnglish from '@/components/DailyEnglish.vue'
 
 const appStore = useAppStore()
-const year = new Date().getFullYear()
+const year = currentYear()
 
 // 回到顶部：尊重减弱动效偏好，直接跳转
 function scrollTop() {

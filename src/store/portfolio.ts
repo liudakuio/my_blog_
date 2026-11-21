@@ -11,11 +11,17 @@ import { ref } from 'vue'
 import { getProjectList, getProjectDetail, getProjectCategories,getProjectGallery } from '@/api'
 import type { CategoryVo, ProjectVo } from '@/api/types'
 import type { Project } from '@/types'
+import { pickField, pickFieldList } from '@/utils/i18n'
 
-/** 将后端 ProjectVo 归一化为前端使用的 Project 结构 */
+/**
+ * 将后端 ProjectVo 归一化为前端使用的 Project 结构。
+ * 多语取值：lang=all 时后端把文案收在 vo.zh / vo.en 里（字段平铺），
+ *   lang=zh|en 时则直接平铺在对象上（vo.title / vo.subtitle ...），
+ *   故两套字段都要能取到值——这正是 utils/i18n.ts 的 pickField / pickFieldList 存在的原因。
+ */
 function normalize(vo: ProjectVo): Project {
-  const zh = vo.zh ?? {}
-  const en = vo.en ?? {}
+  const zh = vo.zh
+  const en = vo.en
   return {
     id: vo.id,
     common: {
@@ -31,24 +37,24 @@ function normalize(vo: ProjectVo): Project {
       galleryCount: vo.galleryCount ?? 0
     },
     zh: {
-      title: vo.zh ? (zh.title ?? '') : (vo.title ?? ''),
-      subtitle: vo.zh ? (zh.subtitle ?? '') : (vo.subtitle ?? ''),
-      description: vo.zh ? (zh.description ?? '') : (vo.description ?? ''),
-      role: vo.zh ? (zh.role ?? '') : (vo.role ?? ''),
-      tags: vo.zh ? (zh.tags ?? []) : (vo.tags ?? []),
-      awards: vo.zh ? (zh.awards ?? []) : (vo.awards ?? []),
-      concept: vo.zh ? (zh.concept ?? '') : (vo.concept ?? ''),
-      roleDetail: vo.zh ? (zh.roleDetail ?? '') : (vo.roleDetail ?? '')
+      title: zh ? pickField(zh, 'title') : (vo.title ?? ''),
+      subtitle: zh ? pickField(zh, 'subtitle') : (vo.subtitle ?? ''),
+      description: zh ? pickField(zh, 'description') : (vo.description ?? ''),
+      role: zh ? pickField(zh, 'role') : (vo.role ?? ''),
+      tags: zh ? pickFieldList(zh, 'tags') : (vo.tags ?? []),
+      awards: zh ? pickFieldList(zh, 'awards') : (vo.awards ?? []),
+      concept: zh ? pickField(zh, 'concept') : (vo.concept ?? ''),
+      roleDetail: zh ? pickField(zh, 'roleDetail') : (vo.roleDetail ?? '')
     },
     en: {
-      title: vo.en ? (en.title ?? '') : (vo.title ?? ''),
-      subtitle: vo.en ? (en.subtitle ?? '') : (vo.subtitle ?? ''),
-      description: vo.en ? (en.description ?? '') : (vo.description ?? ''),
-      role: vo.en ? (en.role ?? '') : (vo.role ?? ''),
-      tags: vo.en ? (en.tags ?? []) : (vo.tags ?? []),
-      awards: vo.en ? (en.awards ?? []) : (vo.awards ?? []),
-      concept: vo.en ? (en.concept ?? '') : (vo.concept ?? ''),
-      roleDetail: vo.en ? (en.roleDetail ?? '') : (vo.roleDetail ?? '')
+      title: en ? pickField(en, 'title') : (vo.title ?? ''),
+      subtitle: en ? pickField(en, 'subtitle') : (vo.subtitle ?? ''),
+      description: en ? pickField(en, 'description') : (vo.description ?? ''),
+      role: en ? pickField(en, 'role') : (vo.role ?? ''),
+      tags: en ? pickFieldList(en, 'tags') : (vo.tags ?? []),
+      awards: en ? pickFieldList(en, 'awards') : (vo.awards ?? []),
+      concept: en ? pickField(en, 'concept') : (vo.concept ?? ''),
+      roleDetail: en ? pickField(en, 'roleDetail') : (vo.roleDetail ?? '')
     }
   }
 }
@@ -71,7 +77,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
    * @param force 是否强制请求。loaded 为去重标记，切换分类必须传 true，
    *              否则第二次调用会被直接跳过、列表不刷新。
    * 失败兜底：列表置空（错误提示由请求拦截器统一弹出）。
-   * 返回的是group by title.以标题分组的
+   * @returns 归一化后的作品数组（按后端返回顺序，不做额外分组或排序）
    */
   async function loadProjects(force = false) {
     if (loaded.value && !force) return

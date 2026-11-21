@@ -1,7 +1,8 @@
 <!--
   用户管理（/api/system/user，主键 userId）
-  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
   数据来源：@/api/system 的 systemUserList / Get / Create / Update / Delete。
+  结构说明：列表 / 查询 / 多选 / 弹窗 / 提交 / 删除的通用骨架由 @/composables/useAdminCrud
+    提供，本页只保留模板、表格列、搜索项、校验规则与差异配置（主键、回填、提交字段、删除文案）。
   引用关系：由 router/index.ts 的 SYSTEM_PAGES 注册（权限前缀 system: 的菜单）。
   注意：主键为 userId；修改时 password 留空表示不修改密码；内置 admin 不可删除。
 -->
@@ -143,10 +144,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted } from 'vue'
 import { ArrowDown, ArrowUp, Delete, Edit, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useAdminCrud } from '@/composables/useAdminCrud'
+import { systemEditPerm } from '@/config/permissions'
 import {
   systemUserList,
   systemUserGet,
@@ -154,69 +156,72 @@ import {
   systemUserUpdate,
   systemUserDelete
 } from '@/api/system'
+import type { SysUserQuery, SysUserSaveVo, SysUserVo } from '@/api/system'
 
 const userStore = useUserStore()
-const editable = computed(() => userStore.hasPerm('system:user:edit'))
+const editable = computed(() => userStore.hasPerm(systemEditPerm('user')))
 
 const STATUS_OPTIONS = [
   { label: '正常', value: '0' },
   { label: '停用', value: '1' }
 ]
 
-// ---------------- 列表 ----------------
-const list = ref<any[]>([])
-const loading = ref(false)
-const total = ref(0)
-const selection = ref<any[]>([])
-const showSearch = ref(true)
+/** 用户表单字段；修改时 password 留空表示不修改密码 */
+type UserForm = {
+  username: string
+  nickName: string
+  status: string
+  password: string
+}
 
-const queryParams = reactive<Record<string, any>>({ username: '', status: '' })
-
-async function getList() {
-  loading.value = true
-  try {
-    const params: Record<string, any> = {}
-    Object.keys(queryParams).forEach((k) => {
-      const v = queryParams[k]
-      if (v !== '' && v !== undefined && v !== null) params[k] = v
+// CRUD 骨架由 composable 提供，本页只声明差异点：
+// 主键 userId、查询条件、默认表单、回填规则、提交字段与删除文案。
+const {
+  list, loading, total, selection, showSearch, queryParams,
+  dialogVisible, dialogTitle, saving, formRef, isEdit, form,
+  getList, handleQuery, resetQuery, handleSelectionChange,
+  handleAdd, handleUpdate, cancel, submitForm, handleDelete
+} = useAdminCrud<SysUserVo, UserForm, SysUserQuery>({
+  idField: 'userId',
+  fetchList: (params) => systemUserList(params),
+  fetchDetail: systemUserGet,
+  createFn: (payload) => systemUserCreate(payload as SysUserSaveVo),
+  updateFn: (id, payload) => systemUserUpdate(id, payload as SysUserSaveVo),
+  deleteFn: systemUserDelete,
+  defaultQuery: { username: '', status: '' },
+  createForm: () => ({ username: '', nickName: '', status: '0', password: '' }),
+  // 行数据回填：只回填可编辑字段，密码保持为空
+  fillForm: (form, row) => {
+    Object.assign(form, {
+      username: row.username,
+      nickName: row.nickName,
+      status: row.status
     })
-    const data = await systemUserList(params)
-    list.value = Array.isArray(data) ? data : []
-    total.value = list.value.length
-  } catch (e) {
-    console.error('[admin] 用户列表加载失败', e)
-    list.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function handleQuery() {
-  getList()
-}
-
-function resetQuery() {
-  Object.keys(queryParams).forEach((k) => {
-    queryParams[k] = ''
-  })
-  getList()
-}
-
-function handleSelectionChange(rows: any[]) {
-  selection.value = rows
-}
-
-// ---------------- 弹窗表单 ----------------
-const dialogVisible = ref(false)
-const dialogTitle = ref('')
-const saving = ref(false)
-const formRef = ref<any>(null)
-const editingId = ref<string | number | null>(null)
-const isEdit = computed(() => editingId.value !== null)
-
-const defaultForm = () => ({ username: '', nickName: '', status: '0', password: '' })
-const form = reactive(defaultForm())
+  },
+  // 详情覆盖：字段缺失时保留行数据里的值
+  applyDetail: (form, detail) => {
+    Object.assign(form, {
+      username: detail.username ?? form.username,
+      nickName: detail.nickName ?? form.nickName,
+      status: detail.status ?? form.status
+    })
+  },
+  // 提交字段：密码留空时不提交该字段（后端据此表示不修改密码）
+  buildPayload: (form) => {
+    const payload: Record<string, unknown> = {
+      username: form.username,
+      nickName: form.nickName,
+      status: form.status
+    }
+    if (form.password) payload.password = form.password
+    return payload
+  },
+  titles: { add: '添加用户', edit: '修改用户' },
+  deleteConfirmText: (rows, isBatch) => isBatch
+    ? `确认删除选中的 ${rows.length} 条数据？`
+    : `确认删除用户「${rows[0].nickName || rows[0].username}」？`,
+  logLabel: '用户'
+})
 
 // 新增时密码必填；修改时留空表示不修改
 const rules = computed(() => ({
@@ -224,96 +229,17 @@ const rules = computed(() => ({
   password: isEdit.value ? [] : [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }))
 
-function handleAdd() {
-  editingId.value = null
-  dialogTitle.value = '添加用户'
-  Object.assign(form, defaultForm())
-  dialogVisible.value = true
-}
-
-async function handleUpdate(row?: any) {
-  const target = row ?? selection.value[0]
-  if (!target) return
-  editingId.value = target.userId
-  dialogTitle.value = '修改用户'
-  Object.assign(form, defaultForm(), { username: target.username, nickName: target.nickName, status: target.status })
-  try {
-    const detail: any = await systemUserGet(target.userId)
-    if (detail) {
-      form.username = detail.username ?? form.username
-      form.nickName = detail.nickName ?? form.nickName
-      form.status = detail.status ?? form.status
-    }
-  } catch (e) {
-    console.error('[admin] 用户详情加载失败，使用行数据兜底', e)
-  }
-  // 后端不返回密码，编辑时始终留空
-  form.password = ''
-  dialogVisible.value = true
-}
-
-function cancel() {
-  dialogVisible.value = false
-}
-
-async function submitForm() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  saving.value = true
-  try {
-    const payload: Record<string, any> = {
-      username: form.username,
-      nickName: form.nickName,
-      status: form.status
-    }
-    // 修改时密码留空表示不修改
-    if (form.password) payload.password = form.password
-    if (editingId.value !== null) {
-      await systemUserUpdate(editingId.value, payload)
-      ElMessage.success('修改成功')
-    } else {
-      await systemUserCreate(payload)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    getList()
-  } catch (e) {
-    console.error('[admin] 用户保存失败', e)
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 删除 ----------------
-async function handleDelete(row?: any) {
-  const rows = row ? [row] : selection.value
-  if (!rows.length) return
-  const ok = await ElMessageBox.confirm(
-    row ? `确认删除用户「${row.nickName || row.username}」？` : `确认删除选中的 ${rows.length} 条数据？`,
-    '提示',
-    { type: 'warning' }
-  )
-    .then(() => true)
-    .catch(() => false)
-  if (!ok) return
-
-  const results = await Promise.allSettled(
-    rows.map((r: any) => systemUserDelete(r.userId))
-  )
-  const failed = results.filter((r) => r.status === 'rejected')
-  failed.forEach((r: any) => console.error('[admin] 用户删除失败', r.reason))
-  if (failed.length) {
-    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
-  } else {
-    ElMessage.success(`已删除 ${results.length} 条`)
-  }
-  getList()
-}
-
 onMounted(getList)
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .app-container  页面容器，纵向排列各区块
+   2) .search-card    搜索卡片
+   3) .table-card     表格卡片
+   4) .toolbar       工具栏（左侧操作区 / 右侧统计与刷新）
+   5) .icon-btn      圆形图标按钮
+   6) .w-full        表单控件占满宽度 */
 .app-container {
   display: flex;
   flex-direction: column;

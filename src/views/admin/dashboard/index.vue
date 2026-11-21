@@ -41,12 +41,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import dayjs from 'dayjs'
 import { useUserStore } from '@/store/user'
 import { adminResourceList } from '@/api/adminResource'
 import type { DedicatedResource } from '@/api/adminResource'
+import { formatDate } from '@/utils/date'
+import { adminRouteByResource } from '@/config/routes'
 import { Document, Files, Collection } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -57,27 +59,29 @@ const hour = new Date().getHours()
 const greeting = computed(() =>
   hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
 )
-const today = dayjs().format('YYYY 年 MM 月 DD 日 dddd')
+const today = formatDate(new Date(), 'YYYY 年 MM 月 DD 日 dddd')
 
 interface Stat {
   /** 统计的资源：均为后端提供专用接口的资源 */
   resource: DedicatedResource
   label: string
-  icon: any
+  /** Element Plus 图标组件 */
+  icon: Component
   path: string
   value: number
   loading: boolean
 }
+// 路径统一由 config/routes.ts 按资源名推导，避免与 router 的动态路由规则各自漂移
 const stats = ref<Stat[]>([
-  { resource: 'article', label: '文章', icon: Document, path: '/admin/article/list', value: 0, loading: true },
-  { resource: 'project', label: '作品', icon: Files, path: '/admin/project/list', value: 0, loading: true },
-  { resource: 'article_category', label: '文章分类', icon: Collection, path: '/admin/article/category', value: 0, loading: true },
-  { resource: 'project_category', label: '作品分类', icon: Collection, path: '/admin/project/category', value: 0, loading: true }
+  { resource: 'article', label: '文章', icon: Document, path: adminRouteByResource('article'), value: 0, loading: true },
+  { resource: 'project', label: '作品', icon: Files, path: adminRouteByResource('project'), value: 0, loading: true },
+  { resource: 'article_category', label: '文章分类', icon: Collection, path: adminRouteByResource('article_category'), value: 0, loading: true },
+  { resource: 'project_category', label: '作品分类', icon: Collection, path: adminRouteByResource('project_category'), value: 0, loading: true }
 ])
 
 const quickLinks = [
-  { label: '文章列表', icon: Document, path: '/admin/article/list' },
-  { label: '作品列表', icon: Files, path: '/admin/project/list' }
+  { label: '文章列表', icon: Document, path: adminRouteByResource('article') },
+  { label: '作品列表', icon: Files, path: adminRouteByResource('project') }
 ]
 
 function go(path: string) {
@@ -101,6 +105,13 @@ onMounted(async () => {
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .dashboard      页面容器
+   2) .welcome        欢迎横幅（问候语 + 日期 + 徽标）
+   3) .stats-grid     统计卡片网格
+   4) .stat-card      单个统计卡片
+   5) .panel          快捷入口面板
+   6) .quick-grid     快捷入口网格 */
 .dashboard {
   display: flex;
   flex-direction: column;

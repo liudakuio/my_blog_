@@ -1,6 +1,8 @@
 <!--
   作品列表（/api/admin/project，后端专用接口，字段驼峰）
-  若依原版写法：页面自持全部逻辑与 UI，不依赖任何共享组件 / composable。
+  结构说明：列表 / 查询 / 多选 / 弹窗 / 提交 / 删除的通用骨架由 @/composables/useAdminCrud
+    提供，图片上传逻辑由 @/composables/useImageUpload 提供；
+    本页只保留模板、表格列、搜索项、校验规则与差异配置（主键、分类下拉、提交字段）。
   数据来源：@/api/adminResource 的 adminResourceList / adminResourceGet /
     adminResourceCreate / adminResourceUpdate / adminResourceDelete（专用接口，字段名驼峰）
   筛选说明：后端该接口支持 category、status 两个查询字段（均为等值匹配）；列表全量返回、无分页。
@@ -291,9 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { UploadRequestOptions } from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
 import {
   ArrowDown,
   ArrowUp,
@@ -305,7 +305,8 @@ import {
   Search
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import { adminUploadImage } from '@/api/admin'
+import { useAdminCrud } from '@/composables/useAdminCrud'
+import { useImageUpload } from '@/composables/useImageUpload'
 import {
   adminResourceList,
   adminResourceGet,
@@ -313,36 +314,63 @@ import {
   adminResourceUpdate,
   adminResourceDelete
 } from '@/api/adminResource'
+import type { AdminProjectVo } from '@/api/adminTypes'
 
 const userStore = useUserStore()
 const editable = computed(() => userStore.canEdit('project'))
-const canUpload = computed(() => userStore.hasPerm('blog:upload:edit'))
 
 const STATUS_OPTIONS = [
   { label: '正常', value: '0' },
   { label: '停用', value: '1' }
 ]
 
-// ---------------- 列表 ----------------
-const list = ref<any[]>([])
-const loading = ref(false)
-const total = ref(0)
-const selection = ref<any[]>([])
-const showSearch = ref(true)
+/** 作品表单字段：与后端 AdminProjectVo 的可编辑列一致（id 等主键列不进表单） */
+type ProjectForm = {
+  category: string
+  cover: string
+  icon: string
+  videoUrl: string
+  bilibiliId: string
+  figmaUrl: string
+  websiteUrl: string
+  githubUrl: string
+  sort: number
+  status: string
+  remark: string
+  title: string
+  subtitle: string
+  description: string
+  role: string
+  roleDetail: string
+  concept: string
+  tags: string
+}
 
-const queryParams = reactive<Record<string, any>>({ category: '', status: '' })
+/** 作品页查询条件：后端仅识别 category、status 两个字段；id 为用户输入后写入的动态键 */
+type ProjectQuery = {
+  id: string
+  category: string
+  status: string
+}
 
-// 分类下拉：来自 /api/admin/project_category
+/** 表单字段名列表：提交时只提交这些字段，避免把行数据里的额外列（如 id）一起带上 */
+const FORM_KEYS = [
+  'category', 'cover', 'icon', 'videoUrl', 'bilibiliId', 'figmaUrl', 'websiteUrl', 'githubUrl',
+  'sort', 'status', 'remark', 'title', 'subtitle', 'description', 'role', 'roleDetail', 'concept', 'tags'
+] as const
+
+// 分类下拉：来自 /api/admin/project_category（页面特有，后端专用接口字段驼峰）
 interface CategoryOption {
   value: string
   label: string
 }
 const categoryOptions = ref<CategoryOption[]>([])
 
+/** 拉取作品分类下拉项（中文名 + 分类值） */
 async function loadCategoryOptions() {
   try {
     const data = await adminResourceList('project_category')
-    categoryOptions.value = (Array.isArray(data) ? data : []).map((c: any) => ({
+    categoryOptions.value = (Array.isArray(data) ? data : []).map((c) => ({
       value: c.categoryValue,
       label: c.labelZh ? `${c.labelZh}（${c.categoryValue}）` : c.categoryValue
     }))
@@ -352,212 +380,74 @@ async function loadCategoryOptions() {
   }
 }
 
-/**
- * 拉取 project 列表：先剔除查询参数中的空串 / undefined / null 再发请求。
- * 后端仅识别 category、status 两个查询字段（均为等值匹配）。
- * 后端为全量返回（非分页），故 total 直接取列表长度。
- * 失败兜底：列表置空、total 归零，错误提示由请求拦截器统一弹出。
- */
-async function getList() {
-  loading.value = true
-  try {
-    const params: Record<string, any> = {}
-    Object.keys(queryParams).forEach((k) => {
-      const v = queryParams[k]
-      if (v !== '' && v !== undefined && v !== null) params[k] = v
+// CRUD 骨架由 composable 提供，本页只声明差异点：
+// 后端专用接口（字段驼峰）、主键 id、只提交表单字段的 payload。
+const {
+  list, loading, total, selection, showSearch, queryParams,
+  dialogVisible, dialogTitle, saving, formRef, form,
+  getList, handleQuery, resetQuery, handleSelectionChange,
+  handleAdd, handleUpdate, cancel, submitForm, handleDelete
+} = useAdminCrud<AdminProjectVo, ProjectForm, ProjectQuery>({
+  idField: 'id',
+  fetchList: (params) => adminResourceList('project', params),
+  fetchDetail: (id) => adminResourceGet('project', id),
+  createFn: (payload) => adminResourceCreate('project', payload),
+  updateFn: (id, payload) => adminResourceUpdate('project', id, payload),
+  deleteFn: (id) => adminResourceDelete('project', id),
+  defaultQuery: { category: '', status: '' },
+  createForm: () => ({
+    category: '',
+    cover: '',
+    icon: '',
+    videoUrl: '',
+    bilibiliId: '',
+    figmaUrl: '',
+    websiteUrl: '',
+    githubUrl: '',
+    sort: 0,
+    status: '0',
+    remark: '',
+    title: '',
+    subtitle: '',
+    description: '',
+    role: '',
+    roleDetail: '',
+    concept: '',
+    tags: ''
+  }),
+  // 提交字段：只提交表单定义的字段
+  buildPayload: (form) => {
+    const payload: Record<string, unknown> = {}
+    FORM_KEYS.forEach((k) => {
+      payload[k] = (form as Record<string, unknown>)[k]
     })
-    const data = await adminResourceList('project', params)
-    list.value = Array.isArray(data) ? data : []
-    total.value = list.value.length
-  } catch (e) {
-    console.error('[admin] 作品列表加载失败', e)
-    list.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
-  }
-}
-
-/** 按当前查询条件重新拉取列表（搜索按钮 / 输入框回车触发） */
-function handleQuery() {
-  getList()
-}
-
-/** 清空全部查询条件后重新拉取列表 */
-function resetQuery() {
-  Object.keys(queryParams).forEach((k) => {
-    queryParams[k] = ''
-  })
-  getList()
-}
-
-/** 记录表格多选结果，供批量修改 / 批量删除使用 */
-function handleSelectionChange(rows: any[]) {
-  selection.value = rows
-}
-
-// ---------------- 弹窗表单 ----------------
-const dialogVisible = ref(false)
-const dialogTitle = ref('')
-const saving = ref(false)
-const formRef = ref<any>(null)
-const editingId = ref<string | number | null>(null)
-
-const defaultForm = () => ({
-  category: '',
-  cover: '',
-  icon: '',
-  videoUrl: '',
-  bilibiliId: '',
-  figmaUrl: '',
-  websiteUrl: '',
-  githubUrl: '',
-  sort: 0,
-  status: '0',
-  remark: '',
-  title: '',
-  subtitle: '',
-  description: '',
-  role: '',
-  roleDetail: '',
-  concept: '',
-  tags: ''
+    return payload
+  },
+  titles: { add: '添加作品', edit: '修改作品' },
+  logLabel: '作品'
 })
-const form = reactive(defaultForm())
 
 const rules = {
   id: [{ required: true, message: '作品ID不能为空', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }]
 }
 
-/** 打开新增弹窗：editingId 置空表示新增，表单回填默认值 */
-function handleAdd() {
-  editingId.value = null
-  dialogTitle.value = '添加作品'
-  Object.assign(form, defaultForm())
-  dialogVisible.value = true
-}
-
-/**
- * 打开修改弹窗：优先使用传入行，未传则取表格选中的第一条。
- * 先用行数据填充表单，再拉详情覆盖（保证字段为最新）；
- * 详情请求失败不阻塞，仅打印日志并沿用行数据兜底。
- */
-async function handleUpdate(row?: any) {
-  const target = row ?? selection.value[0]
-  if (!target) return
-  editingId.value = target.id
-  dialogTitle.value = '修改作品'
-  Object.assign(form, defaultForm(), target)
-  try {
-    const detail: any = await adminResourceGet('project', target.id)
-    if (detail) Object.assign(form, detail)
-  } catch (e) {
-    console.error('[admin] 作品详情加载失败，使用行数据兜底', e)
-  }
-  dialogVisible.value = true
-}
-
-/** 关闭弹窗，不保存任何修改 */
-function cancel() {
-  dialogVisible.value = false
-}
-
-/**
- * 提交表单：先做表单校验，校验失败直接返回；
- * 再按 editingId 是否为空区分「修改」与「新增」；
- * 成功后关闭弹窗并刷新列表。
- */
-async function submitForm() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  saving.value = true
-  try {
-    const payload: Record<string, any> = {}
-    Object.keys(defaultForm()).forEach((k) => {
-      payload[k] = (form as any)[k]
-    })
-    if (editingId.value !== null) {
-      await adminResourceUpdate('project', editingId.value, payload)
-      ElMessage.success('修改成功')
-    } else {
-      await adminResourceCreate('project', payload)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    getList()
-  } catch (e) {
-    console.error('[admin] 作品保存失败', e)
-  } finally {
-    saving.value = false
-  }
-}
-
-// ---------------- 删除 ----------------
-/**
- * 删除：传入行时删该行，否则批量删除选中行；
- * 先弹二次确认（用户取消则直接返回），再用 Promise.allSettled 并发删除并统计成功 / 失败条数。
- */
-async function handleDelete(row?: any) {
-  const rows = row ? [row] : selection.value
-  if (!rows.length) return
-  const ok = await ElMessageBox.confirm(
-    row ? '确认删除该条数据？' : `确认删除选中的 ${rows.length} 条数据？`,
-    '提示',
-    { type: 'warning' }
-  )
-    .then(() => true)
-    .catch(() => false)
-  if (!ok) return
-
-  const results = await Promise.allSettled(
-    rows.map((r: any) => adminResourceDelete('project', r.id))
-  )
-  const failed = results.filter((r) => r.status === 'rejected')
-  failed.forEach((r: any) => console.error('[admin] 作品删除失败', r.reason))
-  if (failed.length) {
-    ElMessage.warning(`成功 ${results.length - failed.length} 条，失败 ${failed.length} 条`)
-  } else {
-    ElMessage.success(`已删除 ${results.length} 条`)
-  }
-  getList()
-}
-
 // ---------------- 封面上传 ----------------
-const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-const MAX_SIZE = 5 * 1024 * 1024
-const ACCEPT = ALLOWED_EXT.map((e) => '.' + e).join(',')
-const uploading = ref(false)
-const uploadError = ref('')
-
-function beforeUpload(file: File) {
-  uploadError.value = ''
-  const ext = (file.name.split('.').pop() || '').toLowerCase()
-  if (!ALLOWED_EXT.includes(ext)) {
-    uploadError.value = `不支持的图片类型：${ext || '未知'}（仅支持 ${ALLOWED_EXT.join('/')}）`
-    return false
+// 上传逻辑（权限判断 / 类型与体积校验 / 上传请求）由 useImageUpload 统一提供，
+// 模板里使用的变量名保持不变，页面样式与交互不变。
+const {
+  canUpload,
+  uploading,
+  errorMsg: uploadError,
+  ACCEPT,
+  beforeUpload,
+  handleUpload
+} = useImageUpload({
+  // 上传成功后回写封面字段
+  onUploaded: (url) => {
+    form.cover = url
   }
-  if (file.size > MAX_SIZE) {
-    uploadError.value = `图片超过 5MB（当前 ${(file.size / 1024 / 1024).toFixed(2)}MB）`
-    return false
-  }
-  return true
-}
-
-async function handleUpload(options: UploadRequestOptions) {
-  uploading.value = true
-  try {
-    const res = await adminUploadImage(options.file)
-    form.cover = res.url
-    ElMessage.success('上传成功')
-    options.onSuccess(res as any)
-  } catch (e: any) {
-    uploadError.value = e?.message || '上传失败'
-    options.onError(e)
-  } finally {
-    uploading.value = false
-  }
-}
+})
 
 onMounted(() => {
   loadCategoryOptions()
@@ -566,6 +456,14 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .app-container  页面容器，纵向排列各区块
+   2) .search-card    搜索卡片
+   3) .table-card     表格卡片
+   4) .toolbar       工具栏（左侧操作区 / 右侧统计与刷新）
+   5) .image-upload  封面上传区（缩略图 / 空态 / 按钮）
+   6) .icon-btn      圆形图标按钮
+   7) .w-full        表单控件占满宽度 */
 .app-container {
   display: flex;
   flex-direction: column;

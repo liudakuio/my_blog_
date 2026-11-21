@@ -30,6 +30,10 @@ const collapsed = ref(window.innerWidth < 1280)
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .admin-layout  后台整体布局（侧边栏 + 内容区）
+   2) .sidebar      侧边栏容器
+   3) .main         内容区容器 */
 .admin-layout {
   display: flex;
   min-height: 100vh;

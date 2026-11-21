@@ -1,13 +1,14 @@
-// 全局类型定义：语言、分类枚举、项目/文章/歌曲等数据结构
+// 全局类型定义：语言、分类枚举、项目 / 文章等前端内部数据结构
 // 使用约定：
 //   1) 接口返回对象（VO）类型在 src/api/types.ts，这里只放前端内部使用的结构；
 //   2) 页面文案类结构（SocialLinks / ContactContent / PortfolioPageContent /
-//      ArticlesPageContent / Song）在 src/data/ 下各自定义并导出，此处保留同名声明仅为兼容旧引用，
-//      实际以 src/data 下的定义为准，改动时请改 src/data；
+//      ArticlesPageContent / Song）统一在 src/data/site.ts 定义并导出，
+//      不要在页面里重复声明，也不要在本文件保留同名副本；
 //   3) Category 枚举的取值需与后端 /api/project-categories 下发的 value 保持一致，
 //      否则首页 Hero 点击筛选时会命中不到分类。
 export type Language = 'zh' | 'en'
 
+/** 作品分类；取值与后端 /api/project-categories 的 value 字段一一对应 */
 export enum Category {
   ALL = 'All',
   VIDEO = 'Videography',
@@ -17,6 +18,7 @@ export enum Category {
   ARTICLE = 'Article'
 }
 
+/** 文章分类；取值与后端文章分类字典的 value 字段一一对应 */
 export enum ArticleCategory {
   DIT = 'DiT',
   LUNA = 'LUNA',
@@ -25,12 +27,15 @@ export enum ArticleCategory {
   SERENITY = '山海疗养院'
 }
 
+/** 首页 Hero 区的一条标题文案 */
 export interface HeroItem {
   text: string
   annotation: string
+  /** 点击该标题时按此分类筛选作品；null 表示不做筛选 */
   category: Category | null
 }
 
+/** 首页静态文案 */
 export interface HomeContent {
   heroItems: HeroItem[]
   intro: string
@@ -38,41 +43,7 @@ export interface HomeContent {
   years: string
 }
 
-export interface PortfolioPageContent {
-  title: string
-  description: string
-}
-
-export interface ArticlesPageContent {
-  title: string
-  description: string
-}
-
-export interface SocialLinks {
-  wechat: string
-  xiaohongshu: string
-  bilibili: string
-  px500: string
-}
-
-export interface ContactContent {
-  baseLabel: string
-  locationValue: string
-  contactLabel: string
-  emailMeLabel: string
-  email: string
-  hello: string
-  intro: string
-  socials: SocialLinks
-  tooltip?: string
-  githubLabel: string
-}
-
-export interface NavItem {
-  id: string
-  label: string
-}
-
+/** 前端使用的作品结构（由 api/types.ts 的 ProjectVo 归一化而来） */
 export interface Project {
   id: string
   common: {
@@ -110,6 +81,7 @@ export interface Project {
   }
 }
 
+/** 前端使用的文章结构（由 api/types.ts 的 ArticleVo 归一化而来） */
 export interface Article {
   id: string
   common: {
@@ -128,18 +100,4 @@ export interface Article {
     title: string
     content: string
   }
-}
-
-export interface Song {
-  id: string
-  title: string
-  artist: string
-  cover: string
-  audio: string
-}
-
-export interface Skill {
-  name: string
-  level: number
-  icon?: string
 }

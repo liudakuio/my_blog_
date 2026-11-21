@@ -7,6 +7,10 @@
   权限：editable = userStore.canEdit(resource)，即 blog:{resource}:edit。
   注意：只有未登记进 config/adminPages.ts 的 CONTENT_PAGES 的资源才会走本页；
     已拆分独立页面的资源不读这里的配置；schema 未登记时页面没有表格列与表单字段。
+  与 useAdminCrud 的边界：本页的字段、筛选条件与表单都是**运行时由 schema 决定**的，
+    资源切换时表单结构会整体变化；useAdminCrud 面向的是「字段固定、按配置声明差异」的独立页面，
+    其表单在初始化时即定型，无法承载动态 schema，故本页不接入该 composable，
+    保持两套实现各自清晰，不做强行合并。
 -->
 <template>
   <div class="crud">
@@ -201,11 +205,18 @@ import {
   adminResourceDelete
 } from '@/api/adminResource'
 import { SCHEMA_MAP } from './schema'
-import ImageUpload from './ImageUpload.vue'
+import ImageUpload from '@/components/ImageUpload.vue'
 import type { FieldSchema } from './types'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useMarkdownUpload } from '@/composables/useMarkdownUpload'
+import type { FormRules } from 'element-plus'
+
+/**
+ * 兜底页的行数据：字段由后端 schema 决定，键为下划线列名（通用 CRUD）或驼峰字段（专用接口）。
+ * 主键统一为 id。
+ */
+type CrudRow = Record<string, unknown> & { id?: string | number }
 
 
 const route = useRoute()
@@ -232,7 +243,7 @@ const mdHeight = computed(() => {
   return hasMarkdown.value ? Math.max(420, window.innerHeight - 360) : 400
 })
 
-const list = ref<any[]>([])
+const list = ref<CrudRow[]>([])
 const loading = ref(false)
 
 // 可筛选字段：文本/数字/下拉 且 在表格展示、非 id
@@ -255,7 +266,7 @@ const formFieldsGrouped = computed(() =>
 
 // 表单校验规则（必填项）
 const formRules = computed(() => {
-  const rules: Record<string, any> = {}
+  const rules: FormRules = {}
   formFields.value.forEach((f) => {
     if (f.required) rules[f.key] = [{ required: true, message: `请输入${f.label}`, trigger: 'blur' }]
   })
@@ -268,7 +279,7 @@ function resetFilters() {
 }
 
 function buildParams() {
-  const params: Record<string, any> = {}
+  const params: Record<string, unknown> = {}
   filterFields.value.forEach((f) => {
     const v = filters[f.key]
     if (v !== undefined && v !== null && v !== '') params[f.key] = v
@@ -282,10 +293,10 @@ async function load() {
   try {
     // 走专用接口的 4 个资源用驼峰字段，其余走通用 CRUD 用下划线列名
     const res = resource.value
-    const data: any = isDedicatedResource(res)
+    const data: unknown = isDedicatedResource(res)
       ? await adminResourceList(res, buildParams())
       : await adminList(res, buildParams())
-    list.value = Array.isArray(data) ? data : []
+    list.value = Array.isArray(data) ? (data as CrudRow[]) : []
   } catch (e) {
     list.value = []
   } finally {
@@ -294,9 +305,9 @@ async function load() {
 }
 
 // 下拉值 -> 标签
-function optionLabel(field: FieldSchema, value: any) {
+function optionLabel(field: FieldSchema, value: unknown): string {
   const opt = field.options?.find((o) => o.value === String(value))
-  return opt ? opt.label : value
+  return opt ? opt.label : String(value ?? '')
 }
 
 // ---------------- 弹窗表单 ----------------
@@ -305,9 +316,13 @@ const dialogTitle = ref('')
 const saving = ref(false)
 const formRef = ref()
 const editingId = ref<string | number | null>(null)
+// 表单值集合：字段由 schema 动态决定，同一个键会绑定到 el-input / el-input-number /
+//   el-select / el-date-picker / MdEditor / ImageUpload 等不同控件，
+//   各控件的 modelValue 类型互不相同，故此处保留宽松类型（any），其余逻辑已类型化。
 const formData = reactive<Record<string, any>>({})
 
-function defaultFor(field: FieldSchema): any {
+/** 字段默认值：number 类型用空串（由 el-input-number 自行转换），select 取第一项 */
+function defaultFor(field: FieldSchema): string {
   if (field.type === 'number') return ''
   if (field.type === 'select') return field.options?.[0]?.value ?? ''
   return ''
@@ -320,16 +335,17 @@ function openAdd() {
   dialogVisible.value = true
 }
 
-async function openEdit(row: any) {
-  const pk = row.id
+async function openEdit(row: CrudRow) {
+  const pk = row.id as string | number
   editingId.value = pk
   dialogTitle.value = `编辑 - ${schema.value?.title}`
   try {
     const res = resource.value
-    const detail: any = isDedicatedResource(res)
+    const detail: unknown = isDedicatedResource(res)
       ? await adminResourceGet(res, pk)
       : await adminGet(res, pk)
-    formFields.value.forEach((f) => (formData[f.key] = detail?.[f.key] ?? defaultFor(f)))
+    const detailRow = (detail ?? {}) as CrudRow
+    formFields.value.forEach((f) => (formData[f.key] = detailRow[f.key] ?? defaultFor(f)))
   } catch (e) {
     // 详情失败则用行数据兜底
     formFields.value.forEach((f) => (formData[f.key] = row[f.key] ?? defaultFor(f)))
@@ -342,7 +358,7 @@ async function handleSave() {
   if (!valid) return
   saving.value = true
   try {
-    const payload: Record<string, any> = {}
+    const payload: Record<string, unknown> = {}
     formFields.value.forEach((f) => (payload[f.key] = formData[f.key]))
     const res = resource.value
     if (editingId.value !== null) {
@@ -363,7 +379,7 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(row: any) {
+async function handleDelete(row: CrudRow) {
   try {
     await ElMessageBox.confirm(`确认删除该条数据？`, '提示', { type: 'warning' })
   } catch (e) {
@@ -371,8 +387,9 @@ async function handleDelete(row: any) {
   }
   try {
     const res = resource.value
-    if (isDedicatedResource(res)) await adminResourceDelete(res, row.id)
-    else await adminDelete(res, row.id)
+    const pk = row.id as string | number
+    if (isDedicatedResource(res)) await adminResourceDelete(res, pk)
+    else await adminDelete(res, pk)
     ElMessage.success('已删除')
     load()
   } catch (e) {
@@ -397,6 +414,11 @@ watch(
 </script>
 
 <style lang="less" scoped>
+/* 样式分区：
+   1) .crud        页面容器
+   2) .page-head  页头（标题与描述）
+   3) .toolbar    工具栏（筛选区 / 操作区）
+   4) .table-card 表格卡片 */
 .crud {
   display: flex;
   flex-direction: column;

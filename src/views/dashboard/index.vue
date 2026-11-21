@@ -104,28 +104,9 @@ import { Location } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
 import type { Language, HeroItem, HomeContent } from '@/types'
 import { Category } from '@/types'
+import type { SocialLinks, ContactContent } from '@/data/site'
 import PortfolioGrid from '@/components/PortfolioGrid.vue'
 import StackTicker from '@/components/StackTicker.vue'
-
-interface SocialLinks {
-  wechat: string
-  xiaohongshu: string
-  bilibili: string
-  px500: string
-}
-
-interface ContactContent {
-  baseLabel: string
-  locationValue: string
-  contactLabel: string
-  emailMeLabel: string
-  email: string
-  hello: string
-  intro: string
-  socials: SocialLinks
-  tooltip?: string
-  githubLabel: string
-}
 
 const HOME_DATA: Record<Language, HomeContent> = {
   zh: {
@@ -165,7 +146,7 @@ const router = useRouter()
 const appStore = useAppStore()
 
 // 当前筛选的作品分类（由 Hero 标题点击设置）
-const portfolioCategory = ref<string>('All')
+const portfolioCategory = ref<string>(Category.ALL)
 
 const content = computed(() => HOME_DATA[appStore.language])
 const contactContent = computed(() => CONTACT_DATA[appStore.language])

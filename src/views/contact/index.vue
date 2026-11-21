@@ -74,27 +74,9 @@
 import { ref, computed } from 'vue'
 import { Message, ChatDotSquare, Monitor } from '@element-plus/icons-vue'
 import { useAppStore } from '@/store/app'
+import { writeClipboard } from '@/utils/clipboard'
 import type { Language } from '@/types'
-
-interface SocialLinks {
-  wechat: string
-  xiaohongshu: string
-  bilibili: string
-  px500: string
-}
-
-interface ContactContent {
-  baseLabel: string
-  locationValue: string
-  contactLabel: string
-  emailMeLabel: string
-  email: string
-  hello: string
-  intro: string
-  socials: SocialLinks
-  tooltip?: string
-  githubLabel: string
-}
+import type { SocialLinks, ContactContent } from '@/data/site'
 
 const CONTACT_DATA: Record<Language, ContactContent> = {
   zh: {
@@ -131,32 +113,7 @@ function openLink(link: string) {
   window.open(link, '_blank')
 }
 
-// 复制文本：优先 Clipboard API，失败回落 textarea + execCommand
-async function writeClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-  } catch {
-    /* 继续走回落方案 */
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(ta)
-    return ok
-  } catch {
-    return false
-  }
-}
-
+// 复制文本：优先 Clipboard API，失败回落 textarea + execCommand（实现见 utils/clipboard.ts）
 function flash(flag: 'copied' | 'wechatCopied') {
   const target = flag === 'copied' ? copied : wechatCopied
   target.value = true
